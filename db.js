@@ -165,6 +165,45 @@ async function dbAtualizarStatusRegistro(cpfCnpj, numeroContrato, status) {
     .eq('numero_contrato', String(numeroContrato));
 }
 
+// ─── LOGS DE ACESSO ───────────────────────────────────────────────────────────
+
+async function dbRegistrarLog(payload) {
+  // payload: { acao, arquivo_nome?, quantidade_total?, quantidade_ok?, quantidade_erro?, status, detalhes? }
+  const sb = getSupabase();
+  if (!sb) return;
+  try {
+    await sb.from('logs_acesso').insert([{
+      acao:              payload.acao,
+      arquivo_nome:      payload.arquivo_nome || null,
+      quantidade_total:  payload.quantidade_total || 0,
+      quantidade_ok:     payload.quantidade_ok   || 0,
+      quantidade_erro:   payload.quantidade_erro  || 0,
+      status:            payload.status || 'ok',
+      detalhes:          payload.detalhes ? JSON.stringify(payload.detalhes) : null,
+    }]);
+  } catch (e) {
+    console.warn('Log não registrado:', e.message);
+  }
+}
+
+async function dbListarLogs(filtros = {}) {
+  const sb = getSupabase();
+  if (!sb) return [];
+  let q = sb
+    .from('logs_acesso')
+    .select('*')
+    .order('timestamp', { ascending: false })
+    .limit(200);
+
+  if (filtros.acao)   q = q.eq('acao', filtros.acao);
+  if (filtros.status) q = q.eq('status', filtros.status);
+  if (filtros.data)   q = q.gte('timestamp', filtros.data).lte('timestamp', filtros.data + 'T23:59:59');
+
+  const { data, error } = await q;
+  if (error) { console.error(error); return []; }
+  return data || [];
+}
+
 // ─── SQL PARA CRIAÇÃO DAS TABELAS ─────────────────────────────────────────────
 
 const SQL_CRIAR_TABELAS = `-- ╔══════════════════════════════════════════╗
@@ -200,7 +239,20 @@ CREATE TABLE IF NOT EXISTS registros_processados (
   UNIQUE(cpf_cnpj, numero_contrato)
 );
 
--- 3. Índices para performance
+-- 3. Tabela de logs de acesso
+CREATE TABLE IF NOT EXISTS logs_acesso (
+  id               UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  timestamp        TIMESTAMPTZ DEFAULT NOW(),
+  acao             TEXT NOT NULL,
+  arquivo_nome     TEXT,
+  quantidade_total INTEGER DEFAULT 0,
+  quantidade_ok    INTEGER DEFAULT 0,
+  quantidade_erro  INTEGER DEFAULT 0,
+  status           TEXT DEFAULT 'ok',
+  detalhes         TEXT
+);
+
+-- 4. Índices para performance
 CREATE INDEX IF NOT EXISTS idx_arquivos_hash
   ON arquivos_processados(hash_arquivo);
 
@@ -211,4 +263,10 @@ CREATE INDEX IF NOT EXISTS idx_registros_chave
   ON registros_processados(cpf_cnpj, numero_contrato);
 
 CREATE INDEX IF NOT EXISTS idx_registros_arquivo
-  ON registros_processados(arquivo_id);`;
+  ON registros_processados(arquivo_id);
+
+CREATE INDEX IF NOT EXISTS idx_logs_timestamp
+  ON logs_acesso(timestamp DESC);
+
+CREATE INDEX IF NOT EXISTS idx_logs_acao
+  ON logs_acesso(acao);`;

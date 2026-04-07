@@ -7,329 +7,413 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="app">
-    <header class="app-header">
-      <div class="header-logo">
-        <span class="logo-icon">⬡</span>
-        <div>
-          <h1>XPrisma <span>Importador</span></h1>
-          <p class="header-sub">Controle de importação de planilhas</p>
-        </div>
-      </div>
-      <nav class="tabs">
-        <button class="tab-btn active" data-tab="importar">Importar</button>
-        <button class="tab-btn" data-tab="dashboard">Dashboard</button>
-        <button class="tab-btn" data-tab="configuracoes">Configurações</button>
-      </nav>
-    </header>
-
-    <!-- ===== TAB: IMPORTAR ===== -->
-    <section id="tab-importar" class="tab-content active">
-
-      <!-- Seletor de modo -->
-      <div class="mode-selector">
-        <label class="mode-option active" id="label-manual">
-          <input type="radio" name="modo" value="manual" checked>
-          <div class="mode-card">
-            <span class="mode-icon">📤</span>
-            <strong>Upload Manual</strong>
-            <small>Selecione um arquivo XLSX ou CSV</small>
-          </div>
-        </label>
-        <label class="mode-option" id="label-pasta">
-          <input type="radio" name="modo" value="pasta">
-          <div class="mode-card">
-            <span class="mode-icon">📂</span>
-            <strong>Monitoramento de Pasta</strong>
-            <small>Varredura automática de diretório</small>
-          </div>
-        </label>
-      </div>
-
-      <!-- MODO 1: Upload Manual -->
-      <div id="modo-manual" class="mode-panel active">
-        <div class="upload-area" id="upload-area">
-          <div class="upload-icon">📁</div>
-          <p class="upload-title">Arraste e solte o arquivo aqui</p>
-          <p class="upload-sub">ou</p>
-          <button class="btn btn-primary" id="btn-selecionar">Selecionar arquivo</button>
-          <input type="file" id="input-arquivo" accept=".xlsx,.xls,.csv" hidden>
-          <p class="upload-formats">Formatos aceitos: XLSX, XLS, CSV</p>
-        </div>
-
-        <div id="arquivo-info" class="arquivo-info hidden">
-          <div class="arquivo-info-header">
-            <span class="arquivo-info-icon">📄</span>
-            <div>
-              <div class="info-nome" id="info-nome">—</div>
-              <div class="info-meta">
-                <span id="info-tamanho">—</span> &bull;
-                <span id="info-data">—</span>
-              </div>
-            </div>
-            <button class="btn-remove" id="btn-remover-arquivo" title="Remover arquivo">✕</button>
-          </div>
-          <div class="hash-row">
-            <span class="hash-label">SHA-256:</span>
-            <span id="info-hash" class="hash-text">calculando...</span>
-          </div>
-          <div class="arquivo-acoes">
-            <button class="btn btn-success" id="btn-carregar">Carregar planilha</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- MODO 2: Monitoramento de Pasta -->
-      <div id="modo-pasta" class="mode-panel hidden">
-        <div class="pasta-panel">
-          <div class="pasta-seletor">
-            <div class="pasta-info-display" id="pasta-display">
-              <span class="pasta-icon">📂</span>
-              <span id="pasta-nome">Nenhuma pasta selecionada</span>
-            </div>
-            <button class="btn btn-primary" id="btn-selecionar-pasta">Selecionar pasta</button>
-          </div>
-
-          <div class="pasta-controles" id="pasta-controles">
-            <button class="btn btn-secondary" id="btn-buscar-agora" disabled>🔍 Buscar arquivos agora</button>
-
-            <div class="auto-scan-config">
-              <label class="toggle-label">
-                <input type="checkbox" id="chk-auto-scan">
-                <span class="toggle-switch"></span>
-                Varredura automática
-              </label>
-              <div class="intervalo-config" id="intervalo-config">
-                a cada
-                <input type="number" id="input-intervalo" value="5" min="1" max="60" class="input-small">
-                minutos
-              </div>
-            </div>
-
-            <div class="monitoramento-btns">
-              <button class="btn btn-success" id="btn-iniciar-monitoramento" disabled>▶ Iniciar monitoramento</button>
-              <button class="btn btn-danger hidden" id="btn-parar-monitoramento">⏹ Parar monitoramento</button>
-            </div>
-
-            <div class="monitor-status hidden" id="monitor-status">
-              <span class="pulse-dot"></span>
-              <span id="monitor-status-text">Monitorando...</span>
-            </div>
-          </div>
-
-          <div id="pasta-arquivos-encontrados" class="pasta-arquivos hidden">
-            <div class="pasta-arquivos-header">
-              <h3>Arquivos na pasta</h3>
-              <span id="pasta-count" class="badge">0</span>
-            </div>
-            <div id="lista-pasta-arquivos" class="pasta-lista"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Alertas -->
-      <div id="alertas" class="alertas-container"></div>
-
-      <!-- Mapeamento de colunas (modal inline) -->
-      <div id="col-mapper" class="col-mapper hidden">
-        <div class="col-mapper-inner">
-          <h3>Mapear colunas da planilha</h3>
-          <p>Selecione quais colunas correspondem ao CPF/CNPJ e Número do contrato:</p>
-          <div class="col-mapper-form">
-            <div class="col-mapper-row">
-              <label>CPF / CNPJ</label>
-              <select id="select-cpf-col"></select>
-            </div>
-            <div class="col-mapper-row">
-              <label>Número do contrato</label>
-              <select id="select-contrato-col"></select>
-            </div>
-          </div>
-          <div class="col-mapper-preview" id="col-mapper-preview"></div>
-          <div class="col-mapper-actions">
-            <button class="btn btn-secondary" id="btn-cancelar-mapper">Cancelar</button>
-            <button class="btn btn-primary" id="btn-confirmar-mapper">Confirmar e processar</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Progresso de processamento -->
-      <div id="progresso-container" class="progresso-container hidden">
-        <div class="progresso-header">
-          <span id="progresso-arquivo-nome">Processando...</span>
-          <span id="progresso-pct" class="progresso-pct">0%</span>
-        </div>
-        <div class="progresso-bar">
-          <div class="progresso-fill" id="progresso-fill" style="width:0%"></div>
-        </div>
-        <div class="progresso-stats">
-          <div class="pstat pstat-total">
-            <span class="pstat-num" id="prog-total">0</span>
-            <span class="pstat-label">Total</span>
-          </div>
-          <div class="pstat pstat-enviados">
-            <span class="pstat-num" id="prog-enviados">0</span>
-            <span class="pstat-label">Enviados</span>
-          </div>
-          <div class="pstat pstat-ignorados">
-            <span class="pstat-num" id="prog-ignorados">0</span>
-            <span class="pstat-label">Ignorados</span>
-          </div>
-          <div class="pstat pstat-erros">
-            <span class="pstat-num" id="prog-erros">0</span>
-            <span class="pstat-label">Erros</span>
-          </div>
-        </div>
-        <div class="progresso-log" id="progresso-log"></div>
-      </div>
-
-    </section>
-
-    <!-- ===== TAB: DASHBOARD ===== -->
-    <section id="tab-dashboard" class="tab-content hidden">
-
-      <div class="dash-kpis">
-        <div class="kpi-card">
-          <span class="kpi-num" id="kpi-arquivos-processados">0</span>
-          <span class="kpi-label">Arquivos processados</span>
-        </div>
-        <div class="kpi-card kpi-warn">
-          <span class="kpi-num" id="kpi-arquivos-ignorados">0</span>
-          <span class="kpi-label">Arquivos ignorados</span>
-        </div>
-        <div class="kpi-card">
-          <span class="kpi-num" id="kpi-total-registros">0</span>
-          <span class="kpi-label">Total de registros</span>
-        </div>
-        <div class="kpi-card kpi-success">
-          <span class="kpi-num" id="kpi-total-enviados">0</span>
-          <span class="kpi-label">Registros enviados</span>
-        </div>
-        <div class="kpi-card kpi-danger">
-          <span class="kpi-num" id="kpi-total-erros">0</span>
-          <span class="kpi-label">Registros com erro</span>
-        </div>
-        <div class="kpi-card kpi-info">
-          <span class="kpi-num" id="kpi-eficiencia">—</span>
-          <span class="kpi-label">Taxa de eficiência</span>
-        </div>
-      </div>
-
-      <div class="dash-filtros">
-        <div class="filtro-group">
-          <label>Data inicial</label>
-          <input type="date" id="filtro-data-ini">
-        </div>
-        <div class="filtro-group">
-          <label>Data final</label>
-          <input type="date" id="filtro-data-fim">
-        </div>
-        <div class="filtro-group">
-          <label>Nome do arquivo</label>
-          <input type="text" id="filtro-nome" placeholder="Pesquisar...">
-        </div>
-        <div class="filtro-group">
-          <label>Status</label>
-          <select id="filtro-status">
-            <option value="">Todos</option>
-            <option value="processado">Sucesso</option>
-            <option value="parcial">Parcial</option>
-            <option value="erro">Erro</option>
-          </select>
-        </div>
-        <div class="filtro-actions">
-          <button class="btn btn-primary" id="btn-filtrar">Filtrar</button>
-          <button class="btn btn-ghost" id="btn-limpar-filtros">Limpar</button>
-          <button class="btn btn-ghost" id="btn-atualizar-dash">↻ Atualizar</button>
-        </div>
-      </div>
-
-      <div class="table-wrapper">
-        <table class="dash-table">
-          <thead>
-            <tr>
-              <th>Arquivo</th>
-              <th>Data/Hora</th>
-              <th>Registros</th>
-              <th>Enviados</th>
-              <th>Ignorados</th>
-              <th>Erros</th>
-              <th>Tempo</th>
-              <th>Status</th>
-              <th>Ações</th>
-            </tr>
-          </thead>
-          <tbody id="dash-tbody">
-            <tr><td colspan="9" class="empty-row">Nenhum arquivo processado ainda</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- ===== TAB: CONFIGURAÇÕES ===== -->
-    <section id="tab-configuracoes" class="tab-content hidden">
-      <div class="config-section">
-        <h2>Conexão com Supabase</h2>
-        <div class="config-form">
-          <div class="config-row">
-            <label>Supabase URL</label>
-            <input type="text" id="cfg-url" placeholder="https://xxxx.supabase.co" class="input-full">
-          </div>
-          <div class="config-row">
-            <label>Anon Key</label>
-            <input type="text" id="cfg-key" placeholder="eyJ..." class="input-full">
-          </div>
-          <div class="config-actions">
-            <button class="btn btn-primary" id="btn-salvar-config">Salvar e conectar</button>
-            <span id="config-status" class="config-status"></span>
-          </div>
-        </div>
-      </div>
-
-      <div class="config-section">
-        <h2>Criar tabelas no Supabase</h2>
-        <p class="config-desc">Execute o SQL abaixo no <strong>SQL Editor</strong> do seu projeto Supabase:</p>
-        <div class="sql-block-wrapper">
-          <button class="btn-copy" id="btn-copiar-sql" title="Copiar SQL">📋 Copiar</button>
-          <pre class="sql-block" id="sql-block">-- Carregando...</pre>
-        </div>
-      </div>
-    </section>
-
-  </div>
-
-  <!-- Modal de reprocessamento -->
-  <div id="modal-reprocessar" class="modal-overlay hidden">
-    <div class="modal">
-      <div class="modal-header">
-        <h3>Reprocessar arquivo</h3>
-        <button class="modal-close" id="modal-close">✕</button>
-      </div>
-      <div class="modal-body">
-        <p>Arquivo: <strong id="modal-arquivo-nome">—</strong></p>
-        <div class="modal-stats">
-          <div class="mstat">
-            <span id="modal-erros">0</span>
-            <small>Registros com erro</small>
-          </div>
-          <div class="mstat mstat-ok">
-            <span id="modal-ignorados-modal">0</span>
-            <small>Já enviados (serão ignorados)</small>
-          </div>
-        </div>
-        <p class="modal-info">Apenas os registros com erro serão reprocessados. Registros já enviados com sucesso não serão reenviados.</p>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-ghost" id="btn-cancelar-reprocessar">Cancelar</button>
-        <button class="btn btn-warning" id="btn-confirmar-reprocessar">Reprocessar erros</button>
+<div id="app">
+  <header class="app-header">
+    <div class="header-logo">
+      <span class="logo-icon">⬡</span>
+      <div>
+        <h1>XPrisma <span>Importador</span></h1>
+        <p class="header-sub">Controle de importação de planilhas</p>
       </div>
     </div>
-  </div>
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="importar">Importar</button>
+      <button class="tab-btn" data-tab="dashboard">Dashboard</button>
+      <button class="tab-btn" data-tab="logs">Logs</button>
+      <button class="tab-btn" data-tab="configuracoes">Configurações</button>
+    </nav>
+  </header>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-  <script src="supabase-init.js"></script>
-  <script src="db.js"></script>
-  <script src="app.js"></script>
+  <!-- ===== TAB: IMPORTAR ===== -->
+  <section id="tab-importar" class="tab-content active">
+
+    <!-- Seletor de modo -->
+    <div class="mode-selector">
+      <label class="mode-option active" id="label-manual">
+        <input type="radio" name="modo" value="manual" checked>
+        <div class="mode-card">
+          <span class="mode-icon">📤</span>
+          <strong>Upload Manual</strong>
+          <small>Arquivo XLSX ou CSV</small>
+        </div>
+      </label>
+      <label class="mode-option" id="label-pasta">
+        <input type="radio" name="modo" value="pasta">
+        <div class="mode-card">
+          <span class="mode-icon">📂</span>
+          <strong>Monitorar Pasta</strong>
+          <small>Varredura automática</small>
+        </div>
+      </label>
+      <label class="mode-option" id="label-direto">
+        <input type="radio" name="modo" value="direto">
+        <div class="mode-card">
+          <span class="mode-icon">✏️</span>
+          <strong>Entrada Direta</strong>
+          <small>Dados separados por ;</small>
+        </div>
+      </label>
+    </div>
+
+    <!-- MODO 1: Upload Manual -->
+    <div id="modo-manual" class="mode-panel active">
+      <div class="upload-area" id="upload-area">
+        <div class="upload-icon">📁</div>
+        <p class="upload-title">Arraste e solte o arquivo aqui</p>
+        <p class="upload-sub">ou</p>
+        <button class="btn btn-primary" id="btn-selecionar">Selecionar arquivo</button>
+        <input type="file" id="input-arquivo" accept=".xlsx,.xls,.csv" hidden>
+        <p class="upload-formats">Formatos: XLSX, XLS, CSV</p>
+      </div>
+
+      <div id="arquivo-info" class="arquivo-info hidden">
+        <div class="arquivo-info-header">
+          <span class="arquivo-info-icon">📄</span>
+          <div class="arquivo-info-meta">
+            <div class="info-nome" id="info-nome">—</div>
+            <div class="info-sub">
+              <span id="info-tamanho">—</span> &bull; <span id="info-data">—</span>
+            </div>
+          </div>
+          <button class="btn-remove" id="btn-remover-arquivo" title="Remover">✕</button>
+        </div>
+        <div class="hash-row">
+          <span class="hash-label">SHA-256:</span>
+          <span id="info-hash" class="hash-text">calculando...</span>
+        </div>
+        <div class="arquivo-acoes">
+          <button class="btn btn-success" id="btn-carregar">Carregar planilha</button>
+          <button class="btn btn-ghost" id="btn-download-template" title="Baixar modelo CSV">📥 Baixar layout CSV</button>
+        </div>
+      </div>
+
+      <div id="erro-arquivo" class="erro-arquivo hidden">
+        <div class="erro-arquivo-inner">
+          <span class="erro-icon">⚠️</span>
+          <div>
+            <strong id="erro-arquivo-titulo">Arquivo inválido</strong>
+            <p id="erro-arquivo-msg">—</p>
+          </div>
+        </div>
+        <button class="btn btn-warning" id="btn-download-template-erro">📥 Baixar layout CSV de exemplo</button>
+      </div>
+    </div>
+
+    <!-- MODO 2: Monitoramento de Pasta -->
+    <div id="modo-pasta" class="mode-panel hidden">
+      <div class="pasta-panel">
+        <div class="pasta-seletor">
+          <div class="pasta-info-display" id="pasta-display">
+            <span class="pasta-icon">📂</span>
+            <span id="pasta-nome">Nenhuma pasta selecionada</span>
+          </div>
+          <button class="btn btn-primary" id="btn-selecionar-pasta">Selecionar pasta</button>
+        </div>
+        <div class="pasta-controles">
+          <button class="btn btn-secondary" id="btn-buscar-agora" disabled>🔍 Buscar arquivos agora</button>
+          <div class="auto-scan-config">
+            <label class="toggle-label">
+              <input type="checkbox" id="chk-auto-scan">
+              <span class="toggle-switch"></span>
+              Varredura automática
+            </label>
+            <div class="intervalo-config">
+              a cada <input type="number" id="input-intervalo" value="5" min="1" max="60" class="input-small"> minutos
+            </div>
+          </div>
+          <div class="monitoramento-btns">
+            <button class="btn btn-success" id="btn-iniciar-monitoramento" disabled>▶ Iniciar monitoramento</button>
+            <button class="btn btn-danger hidden" id="btn-parar-monitoramento">⏹ Parar</button>
+          </div>
+          <div class="monitor-status hidden" id="monitor-status">
+            <span class="pulse-dot"></span>
+            <span id="monitor-status-text">Monitorando...</span>
+          </div>
+        </div>
+        <div id="pasta-arquivos-encontrados" class="pasta-arquivos hidden">
+          <div class="pasta-arquivos-header">
+            <h3>Arquivos na pasta</h3>
+            <span id="pasta-count" class="badge">0</span>
+          </div>
+          <div id="lista-pasta-arquivos" class="pasta-lista"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODO 3: Entrada Direta -->
+    <div id="modo-direto" class="mode-panel hidden">
+      <div class="direto-panel">
+        <div class="direto-header">
+          <h3>Entrada direta de dados</h3>
+          <p>Cole os dados abaixo, <strong>separados por ponto e vírgula (;)</strong>. A primeira linha deve ser o cabeçalho.</p>
+        </div>
+        <div class="direto-exemplo">
+          <span class="exemplo-label">Exemplo:</span>
+          <code>CPF_CNPJ;NUMERO_CONTRATO;NOME;TELEFONE<br>12345678900;CONT001;João Silva;11999999999<br>98765432100;CONT002;Maria Santos;11888888888</code>
+        </div>
+        <textarea id="textarea-direto" class="direto-textarea" placeholder="CPF_CNPJ;NUMERO_CONTRATO;NOME;TELEFONE&#10;12345678900;CONT001;João Silva;11999999999"></textarea>
+        <div class="direto-acoes">
+          <button class="btn btn-ghost" id="btn-limpar-direto">Limpar</button>
+          <button class="btn btn-primary" id="btn-analisar-direto">Analisar dados →</button>
+        </div>
+        <div id="direto-preview" class="direto-preview hidden">
+          <div class="preview-header">
+            <span id="direto-preview-count" class="badge">0 registros</span>
+            <span id="direto-preview-colunas" class="preview-colunas"></span>
+          </div>
+          <div id="direto-preview-tabela" class="preview-tabela-wrap"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Alertas -->
+    <div id="alertas" class="alertas-container"></div>
+
+    <!-- Mapeamento de colunas -->
+    <div id="col-mapper" class="col-mapper hidden">
+      <div class="col-mapper-inner">
+        <h3>Mapear colunas da planilha</h3>
+        <p>Selecione quais colunas correspondem ao CPF/CNPJ e Número do contrato:</p>
+        <div class="col-mapper-form">
+          <div class="col-mapper-row">
+            <label>CPF / CNPJ</label>
+            <select id="select-cpf-col"></select>
+          </div>
+          <div class="col-mapper-row">
+            <label>Número do contrato</label>
+            <select id="select-contrato-col"></select>
+          </div>
+        </div>
+        <div class="col-mapper-preview" id="col-mapper-preview"></div>
+        <div class="col-mapper-actions">
+          <button class="btn btn-secondary" id="btn-cancelar-mapper">Cancelar</button>
+          <button class="btn btn-primary" id="btn-confirmar-mapper">Confirmar colunas</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Progresso -->
+    <div id="progresso-container" class="progresso-container hidden">
+      <div class="progresso-header">
+        <span id="progresso-arquivo-nome">Processando...</span>
+        <div class="progresso-header-right">
+          <span id="progresso-pct" class="progresso-pct">0%</span>
+          <button class="btn btn-danger btn-sm" id="btn-cancelar-processamento">⏹ Parar</button>
+        </div>
+      </div>
+      <div class="progresso-bar">
+        <div class="progresso-fill" id="progresso-fill" style="width:0%"></div>
+      </div>
+      <div class="progresso-stats">
+        <div class="pstat pstat-total">
+          <span class="pstat-num" id="prog-total">0</span>
+          <span class="pstat-label">Total</span>
+        </div>
+        <div class="pstat pstat-enviados">
+          <span class="pstat-num" id="prog-enviados">0</span>
+          <span class="pstat-label">Enviados</span>
+        </div>
+        <div class="pstat pstat-ignorados">
+          <span class="pstat-num" id="prog-ignorados">0</span>
+          <span class="pstat-label">Ignorados</span>
+        </div>
+        <div class="pstat pstat-erros">
+          <span class="pstat-num" id="prog-erros">0</span>
+          <span class="pstat-label">Erros</span>
+        </div>
+      </div>
+      <div class="progresso-log" id="progresso-log"></div>
+    </div>
+
+  </section>
+
+  <!-- ===== TAB: DASHBOARD ===== -->
+  <section id="tab-dashboard" class="tab-content hidden">
+    <div class="dash-kpis">
+      <div class="kpi-card"><span class="kpi-num" id="kpi-arquivos-processados">0</span><span class="kpi-label">Arquivos processados</span></div>
+      <div class="kpi-card kpi-warn"><span class="kpi-num" id="kpi-arquivos-ignorados">0</span><span class="kpi-label">Arquivos ignorados</span></div>
+      <div class="kpi-card"><span class="kpi-num" id="kpi-total-registros">0</span><span class="kpi-label">Total de registros</span></div>
+      <div class="kpi-card kpi-success"><span class="kpi-num" id="kpi-total-enviados">0</span><span class="kpi-label">Registros enviados</span></div>
+      <div class="kpi-card kpi-danger"><span class="kpi-num" id="kpi-total-erros">0</span><span class="kpi-label">Registros com erro</span></div>
+      <div class="kpi-card kpi-info"><span class="kpi-num" id="kpi-eficiencia">—</span><span class="kpi-label">Taxa de eficiência</span></div>
+    </div>
+    <div class="dash-filtros">
+      <div class="filtro-group"><label>Data inicial</label><input type="date" id="filtro-data-ini"></div>
+      <div class="filtro-group"><label>Data final</label><input type="date" id="filtro-data-fim"></div>
+      <div class="filtro-group"><label>Nome do arquivo</label><input type="text" id="filtro-nome" placeholder="Pesquisar..."></div>
+      <div class="filtro-group">
+        <label>Status</label>
+        <select id="filtro-status">
+          <option value="">Todos</option>
+          <option value="processado">Sucesso</option>
+          <option value="parcial">Parcial</option>
+          <option value="erro">Erro</option>
+        </select>
+      </div>
+      <div class="filtro-actions">
+        <button class="btn btn-primary" id="btn-filtrar">Filtrar</button>
+        <button class="btn btn-ghost" id="btn-limpar-filtros">Limpar</button>
+        <button class="btn btn-ghost" id="btn-atualizar-dash">↻ Atualizar</button>
+      </div>
+    </div>
+    <div class="table-wrapper">
+      <table class="dash-table">
+        <thead>
+          <tr>
+            <th>Arquivo / Lote</th><th>Data/Hora</th><th>Registros</th>
+            <th>Enviados</th><th>Ignorados</th><th>Erros</th>
+            <th>Tempo</th><th>Status</th><th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="dash-tbody">
+          <tr><td colspan="9" class="empty-row">Nenhum arquivo processado ainda</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ===== TAB: LOGS ===== -->
+  <section id="tab-logs" class="tab-content hidden">
+    <div class="logs-header">
+      <h2>Logs de Acesso</h2>
+      <div class="logs-filtros">
+        <select id="filtro-log-acao">
+          <option value="">Todas as ações</option>
+          <option value="UPLOAD_ARQUIVO">Upload de arquivo</option>
+          <option value="ENTRADA_DIRETA">Entrada direta</option>
+          <option value="DISPARO_CONCLUIDO">Disparo concluído</option>
+          <option value="DISPARO_CANCELADO">Disparo cancelado</option>
+          <option value="ERRO_ARQUIVO">Erro de arquivo</option>
+          <option value="ARQUIVO_DUPLICADO">Arquivo duplicado</option>
+          <option value="REPROCESSAMENTO">Reprocessamento</option>
+        </select>
+        <select id="filtro-log-status">
+          <option value="">Todos os status</option>
+          <option value="ok">OK</option>
+          <option value="erro">Erro</option>
+          <option value="cancelado">Cancelado</option>
+        </select>
+        <input type="date" id="filtro-log-data">
+        <button class="btn btn-primary" id="btn-filtrar-logs">Filtrar</button>
+        <button class="btn btn-ghost" id="btn-atualizar-logs">↻ Atualizar</button>
+      </div>
+    </div>
+    <div class="table-wrapper">
+      <table class="dash-table">
+        <thead>
+          <tr>
+            <th>Data/Hora</th><th>Ação</th><th>Arquivo / Lote</th>
+            <th>Total</th><th>Ok</th><th>Erros</th>
+            <th>Status</th><th>Detalhes</th>
+          </tr>
+        </thead>
+        <tbody id="logs-tbody">
+          <tr><td colspan="8" class="empty-row">Nenhum log registrado</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ===== TAB: CONFIGURAÇÕES ===== -->
+  <section id="tab-configuracoes" class="tab-content hidden">
+    <div class="config-section">
+      <h2>Conexão com Supabase</h2>
+      <div class="config-form">
+        <div class="config-row"><label>Supabase URL</label><input type="text" id="cfg-url" placeholder="https://xxxx.supabase.co" class="input-full"></div>
+        <div class="config-row"><label>Anon Key</label><input type="text" id="cfg-key" placeholder="eyJ..." class="input-full"></div>
+        <div class="config-actions">
+          <button class="btn btn-primary" id="btn-salvar-config">Salvar e conectar</button>
+          <span id="config-status" class="config-status"></span>
+        </div>
+      </div>
+    </div>
+    <div class="config-section">
+      <h2>Criar tabelas no Supabase</h2>
+      <p class="config-desc">Execute o SQL abaixo no <strong>SQL Editor</strong> do Supabase:</p>
+      <div class="sql-block-wrapper">
+        <button class="btn-copy" id="btn-copiar-sql">📋 Copiar</button>
+        <pre class="sql-block" id="sql-block">Carregando...</pre>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ===== MODAL: CONSENTIMENTO / DISPARO ===== -->
+<div id="modal-consentimento" class="modal-overlay hidden">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3>Confirmar envio de registros</h3>
+      <button class="modal-close" id="consent-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="consent-resumo">
+        <div class="consent-stat">
+          <span id="consent-total">0</span>
+          <small>Total</small>
+        </div>
+        <div class="consent-stat consent-stat-ok">
+          <span id="consent-novos">0</span>
+          <small>Novos registros</small>
+        </div>
+        <div class="consent-stat consent-stat-warn">
+          <span id="consent-duplicados">0</span>
+          <small>Duplicados (ignorar)</small>
+        </div>
+      </div>
+
+      <div class="consent-lote">
+        <label>Descrição do lote <span class="opcional">(opcional)</span></label>
+        <input type="text" id="consent-lote-desc" class="input-full" placeholder="Ex: Cobrança maio 2025 — inadimplentes">
+      </div>
+
+      <div class="consent-check-area">
+        <label class="consent-label">
+          <input type="checkbox" id="consent-check">
+          <span class="consent-check-box"></span>
+          <span class="consent-texto">
+            Ao prosseguir, você concorda em receber chamadas telefônicas e mensagens de texto da
+            <strong>Águas Guariroba</strong>, realizadas pela <strong>Atual Cobrança</strong>.
+            Essas comunicações podem ser feitas de forma automatizada, pré-gravada ou com uso de voz
+            por inteligência artificial. Você também concorda em receber comunicações com fins
+            informativos e de marketing relacionadas aos serviços. Para não receber mais contatos,
+            você pode dizer <em>"Não me ligue novamente"</em> a qualquer momento.
+          </span>
+        </label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="consent-cancelar">Cancelar</button>
+      <button class="btn btn-confirmar" id="consent-confirmar" disabled>Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: REPROCESSAR ===== -->
+<div id="modal-reprocessar" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Reprocessar arquivo</h3>
+      <button class="modal-close" id="modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <p>Arquivo: <strong id="modal-arquivo-nome">—</strong></p>
+      <div class="modal-stats">
+        <div class="mstat"><span id="modal-erros">0</span><small>Com erro</small></div>
+        <div class="mstat mstat-ok"><span id="modal-enviados-ok">0</span><small>Já enviados (ignorar)</small></div>
+      </div>
+      <p class="modal-info">Apenas os registros com erro serão reprocessados.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="btn-cancelar-reprocessar">Cancelar</button>
+      <button class="btn btn-warning" id="btn-confirmar-reprocessar">Reprocessar erros</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="supabase-init.js"></script>
+<script src="db.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
