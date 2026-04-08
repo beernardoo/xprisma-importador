@@ -475,6 +475,62 @@ function fecharConsentimento() {
   document.getElementById('modal-consentimento').classList.add('hidden');
 }
 
+// ─── DISPARO FORMULÁRIO ITSCOM ────────────────────────────────────────────────
+
+const RECAPTCHA_SITE_KEY = '6LeDBFwpAAAAAJe8ux9-imrqZ2ueRsEtdiWoDDpX';
+
+async function gerarTokenRecaptcha() {
+  try {
+    if (typeof grecaptcha === 'undefined' || !grecaptcha.enterprise) return '';
+    return await new Promise((resolve, reject) => {
+      grecaptcha.enterprise.ready(async () => {
+        try {
+          const token = await grecaptcha.enterprise.execute(RECAPTCHA_SITE_KEY, { action: 'LEADGEN_FORM_SUBMIT' });
+          resolve(token);
+        } catch (e) { resolve(''); }
+      });
+    });
+  } catch { return ''; }
+}
+
+async function dispararRegistroFormulario(row, cpf, contrato) {
+  try {
+    // Mapeia colunas da linha para campos do formulário
+    const norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[\s_-]+/g, '');
+    const find = keys => {
+      for (const k of Object.keys(row)) {
+        const kn = norm(k);
+        if (keys.some(p => kn.includes(p))) return String(row[k] || '').trim();
+      }
+      return '';
+    };
+
+    // Gera token reCAPTCHA v3 no browser antes de enviar
+    const captchaToken = await gerarTokenRecaptcha();
+
+    const campos = {
+      nome:         find(['nome', 'name', 'razao', 'cliente']),
+      telefone:     find(['telefone', 'phone', 'tel', 'celular', 'fone', 'whatsapp']),
+      cpf:          cpf,
+      vencimento:   find(['vencimento', 'vcto', 'vecto', 'data']),
+      contrato:     contrato,
+      valor:        find(['valor', 'divida', 'saldo', 'debito']),
+      dias:         find(['dias', 'atraso', 'vencidos']),
+      email:        find(['email', 'e-mail', 'mail']),
+      captchaToken,
+    };
+
+    const resp = await fetch('/api/disparar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(campos),
+    });
+    return await resp.json();
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
 // ─── PROCESSAMENTO PRINCIPAL ──────────────────────────────────────────────────
 
 async function iniciarProcessamento(apenasErros = false) {
@@ -574,9 +630,18 @@ async function iniciarProcessamento(apenasErros = false) {
           contIgnorados++;
           addLog(`${cpf} / ${contrato} — IGNORADO (já enviado)`, 'skip');
         } else {
-          await dbInserirRegistro({ cpf_cnpj: cpf, numero_contrato: contrato, arquivo_id: arquivoId, dados_originais: row });
-          contEnviados++;
-          addLog(`${cpf} / ${contrato} — enviado`, 'ok');
+          // ─── DISPARO PARA O FORMULÁRIO ITSCOM ───
+          const resultDisparo = await dispararRegistroFormulario(row, cpf, contrato);
+          const statusDisparo = resultDisparo.success ? 'enviado' : 'erro';
+          await dbInserirRegistro({ cpf_cnpj: cpf, numero_contrato: contrato, arquivo_id: arquivoId, dados_originais: row, status: statusDisparo });
+          if (resultDisparo.success) {
+            contEnviados++;
+            addLog(`${cpf} / ${contrato} — enviado ✓ (contactId: ${resultDisparo.contactId || '—'})`, 'ok');
+          } else {
+            contErros++;
+            addLog(`${cpf} / ${contrato} — ERRO disparo: ${resultDisparo.error}`, 'err');
+            try { await dbMarcarRegistroErro(cpf, contrato, arquivoId, row); } catch {}
+          }
         }
       } catch (e) {
         contErros++;
