@@ -477,20 +477,31 @@ function fecharConsentimento() {
 
 // ─── DISPARO FORMULÁRIO ITSCOM ────────────────────────────────────────────────
 
-const RECAPTCHA_SITE_KEY = '6LeDBFwpAAAAAJe8ux9-imrqZ2ueRsEtdiWoDDpX';
+// ─── CONSTANTES DO FORMULÁRIO ITSCOM ─────────────────────────────────────────
+const XPRISMA_FORM_ID     = '2rww9UqxfjZ73c86wFvS';
+const XPRISMA_LOCATION_ID = 'DAFYNiR9e9W6obXAA7Rm';
+const XPRISMA_RECAPTCHA   = '6LeDBFwpAAAAAJe8ux9-imrqZ2ueRsEtdiWoDDpX';
+const XPRISMA_ENDPOINT    = `https://backend.leadconnectorhq.com/forms/submit?formId=${XPRISMA_FORM_ID}&locationId=${XPRISMA_LOCATION_ID}`;
+const XPRISMA_TERMS       = 'Ao prosseguir, você concorda em receber chamadas telefônicas e mensagens de texto da Águas Guariroba, realizadas pela Atual Cobrança. Essas comunicações podem ser feitas de forma automatizada, pré-gravada ou com uso de voz por inteligência artificial. Você também concorda em receber comunicações com fins informativos e de marketing relacionadas aos serviços. Para não receber mais contatos, você pode dizer "Não me ligue novamente" a qualquer momento.';
 
 async function gerarTokenRecaptcha() {
   try {
     if (typeof grecaptcha === 'undefined' || !grecaptcha.enterprise) return '';
-    return await new Promise((resolve, reject) => {
+    return await new Promise(resolve => {
       grecaptcha.enterprise.ready(async () => {
-        try {
-          const token = await grecaptcha.enterprise.execute(RECAPTCHA_SITE_KEY, { action: 'LEADGEN_FORM_SUBMIT' });
-          resolve(token);
-        } catch (e) { resolve(''); }
+        try { resolve(await grecaptcha.enterprise.execute(XPRISMA_RECAPTCHA, { action: 'LEADGEN_FORM_SUBMIT' })); }
+        catch { resolve(''); }
       });
     });
   } catch { return ''; }
+}
+
+function formatarTelefoneDisparo(phone) {
+  const digits = String(phone || '').replace(/\D/g, '');
+  if (!digits) return '';
+  if (digits.startsWith('55') && digits.length >= 12) return '+' + digits;
+  if (digits.length >= 10) return '+55' + digits;
+  return digits;
 }
 
 async function dispararRegistroFormulario(row, cpf, contrato) {
@@ -505,27 +516,53 @@ async function dispararRegistroFormulario(row, cpf, contrato) {
       return '';
     };
 
-    // Gera token reCAPTCHA v3 no browser antes de enviar
+    const nome      = find(['nome', 'name', 'razao', 'cliente']);
+    const telefone  = find(['telefone', 'phone', 'tel', 'celular', 'fone', 'whatsapp']);
+    const vencimento = find(['vencimento', 'vcto', 'vecto', 'data']);
+    const valor     = find(['valor', 'divida', 'saldo', 'debito']);
+    const dias      = find(['dias', 'atraso', 'vencidos']);
+    const email     = find(['email', 'e-mail', 'mail']);
+
+    // Gera token reCAPTCHA v3 diretamente no browser
     const captchaToken = await gerarTokenRecaptcha();
 
-    const campos = {
-      nome:         find(['nome', 'name', 'razao', 'cliente']),
-      telefone:     find(['telefone', 'phone', 'tel', 'celular', 'fone', 'whatsapp']),
-      cpf:          cpf,
-      vencimento:   find(['vencimento', 'vcto', 'vecto', 'data']),
-      contrato:     contrato,
-      valor:        find(['valor', 'divida', 'saldo', 'debito']),
-      dias:         find(['dias', 'atraso', 'vencidos']),
-      email:        find(['email', 'e-mail', 'mail']),
-      captchaToken,
+    // Objeto interno formData exigido pelo formulário GHL/itscom
+    const formDataObj = {
+      full_name:            nome,
+      phone:                formatarTelefoneDisparo(telefone),
+      kwzvkvRVPG0XO2wsPJsY: cpf,
+      iWG7aSZIvHiuHKfUKoU3: vencimento,
+      oave3BWDEY9YcIub1lo5: contrato,
+      E7U6I7VDRuX8MoBbkKPT: valor,
+      fTcFF96MfD6heYDSw54F:  dias,
+      terms_and_conditions:  XPRISMA_TERMS,
+      formId:                XPRISMA_FORM_ID,
+      location_id:           XPRISMA_LOCATION_ID,
     };
+    if (email) formDataObj.email = email;
 
-    const resp = await fetch('/api/disparar', {
+    // Monta FormData (browser nativo)
+    const fd = new FormData();
+    fd.append('formData',   JSON.stringify(formDataObj));
+    fd.append('locationId', XPRISMA_LOCATION_ID);
+    fd.append('formId',     XPRISMA_FORM_ID);
+    if (captchaToken) fd.append('captchaV3', captchaToken);
+
+    // POST direto do browser (Cloudflare cookies + reCAPTCHA presentes)
+    const resp = await fetch(XPRISMA_ENDPOINT, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(campos),
+      body:   fd,
     });
-    return await resp.json();
+
+    const status = resp.status;
+    let data;
+    try { data = await resp.json(); } catch { data = { raw: await resp.text() }; }
+
+    if (status >= 200 && status < 300) {
+      return { success: true, contactId: data?.contact?.id, submissionId: data?.submissionId, status };
+    }
+    return { success: false, error: `HTTP ${status}`, data };
+
   } catch (e) {
     return { success: false, error: e.message };
   }
