@@ -546,6 +546,16 @@ async function iniciarProcessamento(apenasErros = false) {
     const cpf = normalizarCpf(row[state.colCpf]);
     const contrato = String(row[state.colContrato] || '').trim();
 
+    // ─── EMAIL PLACEHOLDER ───
+    const emailCols = Object.keys(row).filter(k => /email/i.test(k));
+    if (emailCols.length > 0) {
+      const emailCol = emailCols[0];
+      const emailVal = String(row[emailCol] || '').trim();
+      if (!emailVal) {
+        row[emailCol] = `cliente.${cpf || Date.now()}@semcadastro.xprisma`;
+      }
+    }
+
     if (!cpf || !contrato) {
       contIgnorados++;
       addLog(`Linha ${i+1}: CPF/CNPJ ou contrato vazio — ignorado`, 'skip');
