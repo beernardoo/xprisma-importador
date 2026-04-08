@@ -223,10 +223,9 @@ function downloadTemplateCSV() {
   const lines = [
     '# LAYOUT DE IMPORTACAO XPRISMA',
     '# Campos obrigatorios: CPF_CNPJ, NUMERO_CONTRATO',
-    '# EMAIL: se deixado em branco, sera preenchido automaticamente pelo sistema',
-    'CPF_CNPJ;NUMERO_CONTRATO;NOME;TELEFONE;EMAIL;VALOR_DIVIDA;DATA_VENCIMENTO',
-    '12345678900;CONT001;Joao Silva;11999999999;joao@email.com;1500.00;2025-06-30',
-    '98765432100;CONT002;Maria Santos;11888888888;;850.00;2025-07-15',
+    'CPF_CNPJ;NUMERO_CONTRATO;NOME;TELEFONE;VALOR_DIVIDA;DATA_VENCIMENTO;DIAS_ATRASO',
+    '12345678900;CONT001;Joao Silva;11999999999;1500.00;2025-06-30;30',
+    '98765432100;CONT002;Maria Santos;11888888888;850.00;2025-07-15;15',
   ];
   const blob = new Blob([lines.join('\n') + '\n'], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
@@ -421,8 +420,6 @@ async function prepararDisparo(rows, modo) {
   // Pré-preenche a descrição com o nome do arquivo (só se veio de arquivo)
   const descEl = document.getElementById('consent-lote-desc');
   descEl.value = (modo === 'arquivo' && state.arquivoAtual?.name) ? state.arquivoAtual.name : '';
-  document.getElementById('consent-email').value = '';
-  document.getElementById('consent-email').classList.remove('input-invalid');
   // Reseta checkbox e botão
   const checkEl = document.getElementById('consent-check');
   checkEl.checked = false;
@@ -433,21 +430,10 @@ async function prepararDisparo(rows, modo) {
 
 // ─── MODAL CONSENTIMENTO ──────────────────────────────────────────────────────
 
-function emailValido(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
-
 function atualizarEstadoModal() {
-  const desc  = document.getElementById('consent-lote-desc').value.trim();
-  const email = document.getElementById('consent-email').value.trim();
-  const ok    = desc && emailValido(email);
+  const desc = document.getElementById('consent-lote-desc').value.trim();
+  const ok   = !!desc;
   const checkEl = document.getElementById('consent-check');
-
-  // Feedback visual no campo email
-  const emailEl = document.getElementById('consent-email');
-  if (email && !emailValido(email)) {
-    emailEl.classList.add('input-invalid');
-  } else {
-    emailEl.classList.remove('input-invalid');
-  }
 
   // Auto-marca o checkbox quando os campos obrigatórios estão preenchidos
   checkEl.disabled = !ok;
@@ -456,7 +442,6 @@ function atualizarEstadoModal() {
 }
 
 document.getElementById('consent-lote-desc').addEventListener('input', atualizarEstadoModal);
-document.getElementById('consent-email').addEventListener('input', atualizarEstadoModal);
 
 document.getElementById('consent-check').addEventListener('change', atualizarEstadoModal);
 
@@ -521,7 +506,6 @@ async function dispararRegistroFormulario(row, cpf, contrato) {
     const vencimento = find(['vencimento', 'vcto', 'vecto', 'data']);
     const valor     = find(['valor', 'divida', 'saldo', 'debito']);
     const dias      = find(['dias', 'atraso', 'vencidos']);
-    const email     = find(['email', 'e-mail', 'mail']);
 
     // Gera token reCAPTCHA v3 diretamente no browser
     const captchaToken = await gerarTokenRecaptcha();
@@ -539,7 +523,6 @@ async function dispararRegistroFormulario(row, cpf, contrato) {
       formId:                XPRISMA_FORM_ID,
       location_id:           XPRISMA_LOCATION_ID,
     };
-    if (email) formDataObj.email = email;
 
     // Monta FormData (browser nativo)
     const fd = new FormData();
@@ -578,7 +561,6 @@ async function iniciarProcessamento(apenasErros = false) {
   const inicio = Date.now();
   const nomeArquivo = state.arquivoAtual?.name || (state.pendingModo === 'direto' ? 'Entrada Direta' : 'arquivo.xlsx');
   const loteDesc  = document.getElementById('consent-lote-desc')?.value || nomeArquivo;
-  const loteEmail = document.getElementById('consent-email')?.value || '';
 
   // Registra o arquivo no banco (se não for reprocessamento)
   let arquivoId = state.pendingArquivoId;
@@ -647,16 +629,6 @@ async function iniciarProcessamento(apenasErros = false) {
     const cpf = normalizarCpf(row[state.colCpf]);
     const contrato = String(row[state.colContrato] || '').trim();
 
-    // ─── EMAIL PLACEHOLDER ───
-    const emailCols = Object.keys(row).filter(k => /email/i.test(k));
-    if (emailCols.length > 0) {
-      const emailCol = emailCols[0];
-      const emailVal = String(row[emailCol] || '').trim();
-      if (!emailVal) {
-        row[emailCol] = `cliente.${cpf || Date.now()}@semcadastro.xprisma`;
-      }
-    }
-
     if (!cpf || !contrato) {
       contIgnorados++;
       addLog(`Linha ${i+1}: CPF/CNPJ ou contrato vazio — ignorado`, 'skip');
@@ -698,7 +670,7 @@ async function iniciarProcessamento(apenasErros = false) {
   const status = contErros === 0 ? 'processado' : (contEnviados > 0 ? 'parcial' : 'erro');
 
   await dbAtualizarArquivo(arquivoId, { status, quantidade_registros: contTotal, quantidade_enviados: contEnviados, quantidade_erros: contErros, quantidade_pendentes: 0, tempo_processamento: tempoSeg });
-  await dbRegistrarLog({ acao: 'DISPARO_CONCLUIDO', arquivo_nome: loteDesc, quantidade_total: contTotal, quantidade_ok: contEnviados, quantidade_erro: contErros, status: status === 'erro' ? 'erro' : 'ok', detalhes: { tempo_seg: tempoSeg, responsavel: loteEmail } });
+  await dbRegistrarLog({ acao: 'DISPARO_CONCLUIDO', arquivo_nome: loteDesc, quantidade_total: contTotal, quantidade_ok: contEnviados, quantidade_erro: contErros, status: status === 'erro' ? 'erro' : 'ok', detalhes: { tempo_seg: tempoSeg } });
 
   const tipoFinal = contErros === 0 ? 'success' : (contEnviados > 0 ? 'warning' : 'danger');
   mostrarAlerta(`Concluído em ${formatTempo(tempoSeg)}: ${contEnviados} enviados, ${contIgnorados} ignorados, ${contErros} erros.`, tipoFinal, 0);

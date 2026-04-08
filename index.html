@@ -66,7 +66,6 @@
         <button class="btn btn-primary" id="btn-selecionar">Selecionar arquivo</button>
         <input type="file" id="input-arquivo" accept=".xlsx,.xls,.csv" hidden>
         <p class="upload-formats">Formatos: XLSX, XLS, CSV</p>
-        <p class="aviso-email-upload">💡 Campo EMAIL: se vazio na planilha, será preenchido automaticamente.</p>
       </div>
 
       <div id="arquivo-info" class="arquivo-info hidden">
@@ -152,11 +151,7 @@
         </div>
         <div class="direto-exemplo">
           <span class="exemplo-label">Exemplo:</span>
-          <code>CPF_CNPJ;NUMERO_CONTRATO;NOME;TELEFONE;EMAIL<br>12345678900;CONT001;João Silva;11999999999;joao@email.com<br>98765432100;CONT002;Maria Santos;11888888888;</code>
-        </div>
-        <div class="aviso-email">
-          <span>💡</span>
-          <span>Campo <strong>EMAIL</strong> opcional — se deixado em branco, o sistema gera automaticamente um e-mail de cadastro para o cliente.</span>
+          <code>CPF_CNPJ;NUMERO_CONTRATO;NOME;TELEFONE;VALOR_DIVIDA;DATA_VENCIMENTO;DIAS_ATRASO<br>12345678900;CONT001;João Silva;11999999999;1500.00;30/06/2025;30</code>
         </div>
         <textarea id="textarea-direto" class="direto-textarea" placeholder="CPF_CNPJ;NUMERO_CONTRATO;NOME;TELEFONE&#10;12345678900;CONT001;João Silva;11999999999"></textarea>
         <div class="direto-acoes">
@@ -390,10 +385,6 @@
         <input type="text" id="consent-lote-desc" class="input-full" placeholder="Ex: Cobrança maio 2025 — inadimplentes">
       </div>
 
-      <div class="consent-lote">
-        <label>E-mail do responsável <span class="campo-obrigatorio">* obrigatório</span></label>
-        <input type="email" id="consent-email" class="input-full" placeholder="Ex: responsavel@empresa.com.br">
-      </div>
 
       <div class="consent-check-area">
         <label class="consent-label">
