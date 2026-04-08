@@ -220,9 +220,15 @@ document.getElementById('btn-carregar').addEventListener('click', async () => {
 // ─── TEMPLATE CSV ─────────────────────────────────────────────────────────────
 
 function downloadTemplateCSV() {
-  const header = 'CPF_CNPJ;NUMERO_CONTRATO;NOME;TELEFONE;EMAIL;VALOR_DIVIDA;DATA_VENCIMENTO';
-  const exemplo = '12345678900;CONT001;João Silva;11999999999;joao@email.com;1500.00;2025-06-30';
-  const blob = new Blob([header + '\n' + exemplo + '\n'], { type: 'text/csv;charset=utf-8;' });
+  const lines = [
+    '# LAYOUT DE IMPORTACAO XPRISMA',
+    '# Campos obrigatorios: CPF_CNPJ, NUMERO_CONTRATO',
+    '# EMAIL: se deixado em branco, sera preenchido automaticamente pelo sistema',
+    'CPF_CNPJ;NUMERO_CONTRATO;NOME;TELEFONE;EMAIL;VALOR_DIVIDA;DATA_VENCIMENTO',
+    '12345678900;CONT001;Joao Silva;11999999999;joao@email.com;1500.00;2025-06-30',
+    '98765432100;CONT002;Maria Santos;11888888888;;850.00;2025-07-15',
+  ];
+  const blob = new Blob([lines.join('\n') + '\n'], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -434,9 +440,6 @@ function atualizarEstadoModal() {
   const email = document.getElementById('consent-email').value.trim();
   const ok    = desc && emailValido(email);
   const checkEl = document.getElementById('consent-check');
-  checkEl.disabled = !ok;
-  if (!ok) { checkEl.checked = false; }
-  document.getElementById('consent-confirmar').disabled = !(ok && checkEl.checked);
 
   // Feedback visual no campo email
   const emailEl = document.getElementById('consent-email');
@@ -445,6 +448,11 @@ function atualizarEstadoModal() {
   } else {
     emailEl.classList.remove('input-invalid');
   }
+
+  // Auto-marca o checkbox quando os campos obrigatórios estão preenchidos
+  checkEl.disabled = !ok;
+  checkEl.checked  = ok;
+  document.getElementById('consent-confirmar').disabled = !ok;
 }
 
 document.getElementById('consent-lote-desc').addEventListener('input', atualizarEstadoModal);

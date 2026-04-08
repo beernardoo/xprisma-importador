@@ -1256,3 +1256,25 @@ select:focus,
   border-color: var(--danger) !important;
   box-shadow: 0 0 0 2px rgba(239,68,68,0.2);
 }
+
+/* ===== AVISO EMAIL AUTO ===== */
+.aviso-email {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: rgba(6,182,212,0.08);
+  border: 1px solid rgba(6,182,212,0.25);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+.aviso-email strong { color: var(--info); }
+
+.aviso-email-upload {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  margin-top: 8px;
+}
+.aviso-email-upload { color: var(--info); opacity: 0.8; }

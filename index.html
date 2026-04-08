@@ -64,6 +64,7 @@
         <button class="btn btn-primary" id="btn-selecionar">Selecionar arquivo</button>
         <input type="file" id="input-arquivo" accept=".xlsx,.xls,.csv" hidden>
         <p class="upload-formats">Formatos: XLSX, XLS, CSV</p>
+        <p class="aviso-email-upload">💡 Campo EMAIL: se vazio na planilha, será preenchido automaticamente.</p>
       </div>
 
       <div id="arquivo-info" class="arquivo-info hidden">
@@ -149,7 +150,11 @@
         </div>
         <div class="direto-exemplo">
           <span class="exemplo-label">Exemplo:</span>
-          <code>CPF_CNPJ;NUMERO_CONTRATO;NOME;TELEFONE<br>12345678900;CONT001;João Silva;11999999999<br>98765432100;CONT002;Maria Santos;11888888888</code>
+          <code>CPF_CNPJ;NUMERO_CONTRATO;NOME;TELEFONE;EMAIL<br>12345678900;CONT001;João Silva;11999999999;joao@email.com<br>98765432100;CONT002;Maria Santos;11888888888;</code>
+        </div>
+        <div class="aviso-email">
+          <span>💡</span>
+          <span>Campo <strong>EMAIL</strong> opcional — se deixado em branco, o sistema gera automaticamente um e-mail de cadastro para o cliente.</span>
         </div>
         <textarea id="textarea-direto" class="direto-textarea" placeholder="CPF_CNPJ;NUMERO_CONTRATO;NOME;TELEFONE&#10;12345678900;CONT001;João Silva;11999999999"></textarea>
         <div class="direto-acoes">
