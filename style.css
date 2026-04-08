@@ -1250,3 +1250,9 @@ select:focus,
 .rstat-err span { color: var(--danger); }
 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ===== INPUT INVÁLIDO ===== */
+.input-invalid {
+  border-color: var(--danger) !important;
+  box-shadow: 0 0 0 2px rgba(239,68,68,0.2);
+}

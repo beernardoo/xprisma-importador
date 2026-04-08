@@ -415,25 +415,40 @@ async function prepararDisparo(rows, modo) {
   // Pré-preenche a descrição com o nome do arquivo (só se veio de arquivo)
   const descEl = document.getElementById('consent-lote-desc');
   descEl.value = (modo === 'arquivo' && state.arquivoAtual?.name) ? state.arquivoAtual.name : '';
-  // Reseta checkbox e botão — checkbox só habilita quando desc preenchida
+  document.getElementById('consent-email').value = '';
+  document.getElementById('consent-email').classList.remove('input-invalid');
+  // Reseta checkbox e botão
   const checkEl = document.getElementById('consent-check');
   checkEl.checked = false;
-  checkEl.disabled = !descEl.value.trim();
+  checkEl.disabled = true;
   document.getElementById('consent-confirmar').disabled = true;
   document.getElementById('modal-consentimento').classList.remove('hidden');
 }
 
 // ─── MODAL CONSENTIMENTO ──────────────────────────────────────────────────────
 
+function emailValido(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+
 function atualizarEstadoModal() {
-  const desc = document.getElementById('consent-lote-desc').value.trim();
+  const desc  = document.getElementById('consent-lote-desc').value.trim();
+  const email = document.getElementById('consent-email').value.trim();
+  const ok    = desc && emailValido(email);
   const checkEl = document.getElementById('consent-check');
-  checkEl.disabled = !desc;
-  if (!desc) { checkEl.checked = false; }
-  document.getElementById('consent-confirmar').disabled = !(desc && checkEl.checked);
+  checkEl.disabled = !ok;
+  if (!ok) { checkEl.checked = false; }
+  document.getElementById('consent-confirmar').disabled = !(ok && checkEl.checked);
+
+  // Feedback visual no campo email
+  const emailEl = document.getElementById('consent-email');
+  if (email && !emailValido(email)) {
+    emailEl.classList.add('input-invalid');
+  } else {
+    emailEl.classList.remove('input-invalid');
+  }
 }
 
 document.getElementById('consent-lote-desc').addEventListener('input', atualizarEstadoModal);
+document.getElementById('consent-email').addEventListener('input', atualizarEstadoModal);
 
 document.getElementById('consent-check').addEventListener('change', atualizarEstadoModal);
 
@@ -461,7 +476,8 @@ async function iniciarProcessamento(apenasErros = false) {
   state.cancelando = false;
   const inicio = Date.now();
   const nomeArquivo = state.arquivoAtual?.name || (state.pendingModo === 'direto' ? 'Entrada Direta' : 'arquivo.xlsx');
-  const loteDesc = document.getElementById('consent-lote-desc')?.value || nomeArquivo;
+  const loteDesc  = document.getElementById('consent-lote-desc')?.value || nomeArquivo;
+  const loteEmail = document.getElementById('consent-email')?.value || '';
 
   // Registra o arquivo no banco (se não for reprocessamento)
   let arquivoId = state.pendingArquivoId;
@@ -562,7 +578,7 @@ async function iniciarProcessamento(apenasErros = false) {
   const status = contErros === 0 ? 'processado' : (contEnviados > 0 ? 'parcial' : 'erro');
 
   await dbAtualizarArquivo(arquivoId, { status, quantidade_registros: contTotal, quantidade_enviados: contEnviados, quantidade_erros: contErros, quantidade_pendentes: 0, tempo_processamento: tempoSeg });
-  await dbRegistrarLog({ acao: 'DISPARO_CONCLUIDO', arquivo_nome: loteDesc, quantidade_total: contTotal, quantidade_ok: contEnviados, quantidade_erro: contErros, status: status === 'erro' ? 'erro' : 'ok', detalhes: { tempo_seg: tempoSeg } });
+  await dbRegistrarLog({ acao: 'DISPARO_CONCLUIDO', arquivo_nome: loteDesc, quantidade_total: contTotal, quantidade_ok: contEnviados, quantidade_erro: contErros, status: status === 'erro' ? 'erro' : 'ok', detalhes: { tempo_seg: tempoSeg, responsavel: loteEmail } });
 
   const tipoFinal = contErros === 0 ? 'success' : (contEnviados > 0 ? 'warning' : 'danger');
   mostrarAlerta(`Concluído em ${formatTempo(tempoSeg)}: ${contEnviados} enviados, ${contIgnorados} ignorados, ${contErros} erros.`, tipoFinal, 0);
