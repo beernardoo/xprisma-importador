@@ -162,6 +162,9 @@
             <span id="direto-preview-colunas" class="preview-colunas"></span>
           </div>
           <div id="direto-preview-tabela" class="preview-tabela-wrap"></div>
+          <div class="direto-dispatch-row">
+            <button class="btn btn-dispatch" id="btn-iniciar-disparo-direto">🚀 Iniciar Disparo</button>
+          </div>
         </div>
       </div>
     </div>
@@ -190,6 +193,20 @@
           <button class="btn btn-primary" id="btn-confirmar-mapper">Confirmar colunas</button>
         </div>
       </div>
+    </div>
+
+    <!-- Resultado do Disparo -->
+    <div id="resultado-envio" class="resultado-envio hidden">
+      <div class="resultado-icon">✅</div>
+      <h3 id="resultado-titulo">Disparo concluído!</h3>
+      <p id="resultado-lote" class="resultado-lote"></p>
+      <div class="resultado-stats">
+        <div class="rstat rstat-ok"><span id="resultado-enviados">0</span><small>Enviados</small></div>
+        <div class="rstat rstat-skip"><span id="resultado-ignorados">0</span><small>Ignorados</small></div>
+        <div class="rstat rstat-err"><span id="resultado-erros">0</span><small>Erros</small></div>
+        <div class="rstat"><span id="resultado-tempo">—</span><small>Tempo</small></div>
+      </div>
+      <button class="btn btn-ghost" id="btn-novo-disparo">+ Novo disparo</button>
     </div>
 
     <!-- Progresso -->
@@ -362,13 +379,13 @@
       </div>
 
       <div class="consent-lote">
-        <label>Descrição do lote <span class="opcional">(opcional)</span></label>
+        <label>Descrição do lote <span class="campo-obrigatorio">* obrigatório</span></label>
         <input type="text" id="consent-lote-desc" class="input-full" placeholder="Ex: Cobrança maio 2025 — inadimplentes">
       </div>
 
       <div class="consent-check-area">
         <label class="consent-label">
-          <input type="checkbox" id="consent-check">
+          <input type="checkbox" id="consent-check" disabled>
           <span class="consent-check-box"></span>
           <span class="consent-texto">
             Ao prosseguir, você concorda em receber chamadas telefônicas e mensagens de texto da

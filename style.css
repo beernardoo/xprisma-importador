@@ -1164,3 +1164,89 @@ select:focus,
   .consent-resumo { grid-template-columns: 1fr; }
   .logs-header { flex-direction: column; align-items: flex-start; }
 }
+
+/* ===== BOTÃO INICIAR DISPARO ===== */
+.btn-dispatch {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  padding: 13px 32px;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  letter-spacing: 0.3px;
+  box-shadow: 0 4px 16px rgba(34,197,94,0.3);
+  transition: all 0.2s;
+}
+.btn-dispatch:hover { background: linear-gradient(135deg, #16a34a, #15803d); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(34,197,94,0.4); }
+.btn-dispatch:active { transform: translateY(0); }
+
+.direto-dispatch-row {
+  margin-top: 18px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ===== CAMPO OBRIGATÓRIO ===== */
+.campo-obrigatorio {
+  color: var(--danger);
+  font-size: 11px;
+  font-weight: 600;
+  margin-left: 4px;
+  letter-spacing: 0.2px;
+}
+
+/* ===== CHECKBOX DESABILITADO ===== */
+#consent-check:disabled + .consent-check-box {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.consent-label:has(#consent-check:disabled) {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* ===== RESULTADO DO DISPARO ===== */
+.resultado-envio {
+  background: var(--bg2);
+  border: 2px solid var(--success);
+  border-radius: var(--radius);
+  padding: 32px 28px;
+  margin-top: 20px;
+  text-align: center;
+  animation: fadeIn 0.4s ease;
+}
+.resultado-envio.resultado-parcial { border-color: var(--warning); }
+.resultado-envio.resultado-erro { border-color: var(--danger); }
+
+.resultado-icon { font-size: 48px; margin-bottom: 10px; }
+.resultado-envio h3 { font-size: 20px; font-weight: 700; margin-bottom: 6px; color: var(--success); }
+.resultado-envio.resultado-parcial h3 { color: var(--warning); }
+.resultado-envio.resultado-erro h3 { color: var(--danger); }
+.resultado-lote { color: var(--text-muted); font-size: 13px; margin-bottom: 24px; }
+
+.resultado-stats {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+.rstat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 72px;
+  background: var(--bg3);
+  border-radius: var(--radius-sm);
+  padding: 14px 18px;
+}
+.rstat span { font-size: 28px; font-weight: 800; }
+.rstat small { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.rstat-ok span { color: var(--success); }
+.rstat-skip span { color: var(--warning); }
+.rstat-err span { color: var(--danger); }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }

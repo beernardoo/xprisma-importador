@@ -329,16 +329,29 @@ document.getElementById('btn-analisar-direto').addEventListener('click', async (
 
   await dbRegistrarLog({ acao: 'ENTRADA_DIRETA', quantidade_total: resultado.rows.length, status: 'ok' });
 
-  // Detecta colunas
+  // Detecta colunas — salva mas não dispara ainda
   const { cpfCol, contratoCol } = detectarColunas(colunas);
   if (cpfCol && contratoCol) {
     state.colCpf = cpfCol;
     state.colContrato = contratoCol;
-    prepararDisparo(resultado.rows, 'direto');
   } else {
-    state.rowsParseadas = [];
-    abrirColumnMapper(colunas);
+    state.colCpf = null;
+    state.colContrato = null;
   }
+
+  // Mostra botão de disparo — usuário decide quando iniciar
+  document.getElementById('btn-iniciar-disparo-direto').style.display = '';
+  document.getElementById('resultado-envio').classList.add('hidden');
+});
+
+document.getElementById('btn-iniciar-disparo-direto').addEventListener('click', () => {
+  if (!state.dadosDiretos.length) { mostrarAlerta('Analise os dados primeiro.', 'warning'); return; }
+  if (!getSupabase()) { mostrarAlerta('Configure as credenciais do Supabase antes de continuar.', 'warning'); return; }
+  if (!state.colCpf || !state.colContrato) {
+    abrirColumnMapper(Object.keys(state.dadosDiretos[0] || {}));
+    return;
+  }
+  prepararDisparo(state.dadosDiretos, 'direto');
 });
 
 function parseDireto(texto) {
@@ -399,17 +412,30 @@ async function prepararDisparo(rows, modo) {
   document.getElementById('consent-total').textContent = rows.length;
   document.getElementById('consent-novos').textContent = novos;
   document.getElementById('consent-duplicados').textContent = duplicados;
-  document.getElementById('consent-check').checked = false;
+  // Pré-preenche a descrição com o nome do arquivo (só se veio de arquivo)
+  const descEl = document.getElementById('consent-lote-desc');
+  descEl.value = (modo === 'arquivo' && state.arquivoAtual?.name) ? state.arquivoAtual.name : '';
+  // Reseta checkbox e botão — checkbox só habilita quando desc preenchida
+  const checkEl = document.getElementById('consent-check');
+  checkEl.checked = false;
+  checkEl.disabled = !descEl.value.trim();
   document.getElementById('consent-confirmar').disabled = true;
-  document.getElementById('consent-lote-desc').value = state.arquivoAtual?.name || '';
   document.getElementById('modal-consentimento').classList.remove('hidden');
 }
 
 // ─── MODAL CONSENTIMENTO ──────────────────────────────────────────────────────
 
-document.getElementById('consent-check').addEventListener('change', e => {
-  document.getElementById('consent-confirmar').disabled = !e.target.checked;
-});
+function atualizarEstadoModal() {
+  const desc = document.getElementById('consent-lote-desc').value.trim();
+  const checkEl = document.getElementById('consent-check');
+  checkEl.disabled = !desc;
+  if (!desc) { checkEl.checked = false; }
+  document.getElementById('consent-confirmar').disabled = !(desc && checkEl.checked);
+}
+
+document.getElementById('consent-lote-desc').addEventListener('input', atualizarEstadoModal);
+
+document.getElementById('consent-check').addEventListener('change', atualizarEstadoModal);
 
 document.getElementById('consent-close').addEventListener('click', fecharConsentimento);
 document.getElementById('consent-cancelar').addEventListener('click', () => {
@@ -541,7 +567,32 @@ async function iniciarProcessamento(apenasErros = false) {
   const tipoFinal = contErros === 0 ? 'success' : (contEnviados > 0 ? 'warning' : 'danger');
   mostrarAlerta(`Concluído em ${formatTempo(tempoSeg)}: ${contEnviados} enviados, ${contIgnorados} ignorados, ${contErros} erros.`, tipoFinal, 0);
   addLog('─── Processamento concluído ───');
+  mostrarResultadoEnvio({ lote: loteDesc, total: contTotal, enviados: contEnviados, ignorados: contIgnorados, erros: contErros, tempo: tempoSeg });
 }
+
+function mostrarResultadoEnvio({ lote, total, enviados, ignorados, erros, tempo }) {
+  const div = document.getElementById('resultado-envio');
+  const temErros = erros > 0;
+  const tudo = enviados === total;
+  document.getElementById('resultado-titulo').textContent = temErros ? (enviados > 0 ? 'Disparo concluído com avisos' : 'Disparo com erros') : 'Disparo concluído com sucesso!';
+  document.getElementById('resultado-lote').textContent = `Lote: ${lote}`;
+  document.getElementById('resultado-enviados').textContent = enviados;
+  document.getElementById('resultado-ignorados').textContent = ignorados;
+  document.getElementById('resultado-erros').textContent = erros;
+  document.getElementById('resultado-tempo').textContent = formatTempo(tempo);
+  div.className = `resultado-envio ${temErros ? (tudo ? 'resultado-parcial' : 'resultado-erro') : 'resultado-ok'}`;
+  div.classList.remove('hidden');
+  div.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+document.getElementById('btn-novo-disparo').addEventListener('click', () => {
+  document.getElementById('resultado-envio').classList.add('hidden');
+  document.getElementById('progresso-container').classList.add('hidden');
+  document.getElementById('direto-preview').classList.add('hidden');
+  document.getElementById('textarea-direto').value = '';
+  state.dadosDiretos = [];
+  limparAlertas();
+});
 
 function atualizarProgresso(atual, total, enviados, ignorados, erros) {
   const pct = total > 0 ? Math.round((atual / total) * 100) : 0;
