@@ -131,6 +131,24 @@ function mostrarErroPasta(titulo, msg, colsEncontradas) {
   }
 }
 
+// ─── MOVER ARQUIVO PARA PASTA PROCESSADOS ────────────────────────────────────
+
+async function moverParaProcessados(file) {
+  if (!state.dirHandle || !file) return false;
+  try {
+    const procDir = await state.dirHandle.getDirectoryHandle('Processados', { create: true });
+    const novoHandle = await procDir.getFileHandle(file.name, { create: true });
+    const writable = await novoHandle.createWritable();
+    await writable.write(await file.arrayBuffer());
+    await writable.close();
+    try { await state.dirHandle.removeEntry(file.name); } catch {}
+    return true;
+  } catch (e) {
+    console.warn('Erro ao mover para Processados:', e.message);
+    return false;
+  }
+}
+
 function ocultarErroPasta() {
   document.getElementById('erro-pasta').classList.add('hidden');
   document.getElementById('erro-pasta-colunas').classList.add('hidden');
@@ -209,6 +227,7 @@ async function processarSelecaoArquivo(file) {
   state.colCpf = null;
   state.colContrato = null;
   state.rowsParseadas = [];
+  state.arquivoVemDePasta = false;
 
   document.getElementById('info-nome').textContent = file.name;
   document.getElementById('info-tamanho').textContent = formatBytes(file.size);
@@ -748,13 +767,36 @@ async function iniciarProcessamento(apenasErros = false) {
   const tempoSeg = Math.round((Date.now() - inicio) / 1000);
   const status = contErros === 0 ? 'processado' : (contEnviados > 0 ? 'parcial' : 'erro');
 
+  const pastaNome = state.arquivoVemDePasta && state.dirHandle ? state.dirHandle.name : null;
+  const nomeArquivoLog = pastaNome ? `${pastaNome}/${state.arquivoAtual?.name || loteDesc}` : loteDesc;
+
   await dbAtualizarArquivo(arquivoId, { status, quantidade_registros: contTotal, quantidade_enviados: contEnviados, quantidade_erros: contErros, quantidade_pendentes: 0, tempo_processamento: tempoSeg });
-  await dbRegistrarLog({ acao: 'DISPARO_CONCLUIDO', arquivo_nome: loteDesc, quantidade_total: contTotal, quantidade_ok: contEnviados, quantidade_erro: contErros, status: status === 'erro' ? 'erro' : 'ok', detalhes: { tempo_seg: tempoSeg } });
+  await dbRegistrarLog({
+    acao: 'DISPARO_CONCLUIDO',
+    arquivo_nome: nomeArquivoLog,
+    quantidade_total: contTotal,
+    quantidade_ok: contEnviados,
+    quantidade_erro: contErros,
+    status: status === 'erro' ? 'erro' : 'ok',
+    detalhes: {
+      tempo_seg: tempoSeg,
+      ...(pastaNome ? { pasta: pastaNome, arquivo: state.arquivoAtual?.name } : {}),
+    },
+  });
 
   const tipoFinal = contErros === 0 ? 'success' : (contEnviados > 0 ? 'warning' : 'danger');
   mostrarAlerta(`Concluído em ${formatTempo(tempoSeg)}: ${contEnviados} enviados, ${contIgnorados} ignorados, ${contErros} erros.`, tipoFinal, 0);
   addLog('─── Processamento concluído ───');
   mostrarResultadoEnvio({ lote: loteDesc, total: contTotal, enviados: contEnviados, ignorados: contIgnorados, erros: contErros, tempo: tempoSeg });
+
+  // Move para Processados se veio de pasta e 100% enviado
+  if (state.arquivoVemDePasta && contErros === 0 && contEnviados > 0 && state.arquivoAtual) {
+    const movido = await moverParaProcessados(state.arquivoAtual);
+    if (movido) {
+      addLog(`📁 Movido para ${pastaNome}/Processados/${state.arquivoAtual.name}`, 'ok');
+      setTimeout(() => varrerPasta(), 1500); // atualiza lista após mover
+    }
+  }
 }
 
 function mostrarResultadoEnvio({ lote, total, enviados, ignorados, erros, tempo }) {
@@ -903,6 +945,7 @@ async function varrerPasta() {
           state.colCpf = cpfCol;
           state.colContrato = contratoCol;
           state.arquivosProcessadosLocalmente.add(hash);
+          state.arquivoVemDePasta = true;
           prepararDisparo(rows, 'arquivo');
         } else {
           const faltam = diagnostico.filter(c => c.req && !c.encontrada).map(c => c.key);
@@ -927,24 +970,16 @@ async function varrerPasta() {
     atualizarBarraSelecao();
   };
 
-  // Excluir selecionados
-  document.getElementById('btn-excluir-selecionados').onclick = async () => {
-    const selecionados = [...listaEl.querySelectorAll('.item-chk:checked')].map(c => c.dataset.nome);
-    if (!selecionados.length) return;
-    if (!confirm(`Excluir ${selecionados.length} arquivo(s) da pasta?\n\n${selecionados.join('\n')}`)) return;
-
-    let excluidos = 0, erros = [];
-    for (const nome of selecionados) {
-      try {
-        await state.dirHandle.removeEntry(nome);
-        excluidos++;
-      } catch (e) {
-        erros.push(`${nome}: ${e.message}`);
-      }
-    }
-
-    if (erros.length) mostrarAlerta(`${excluidos} excluído(s). Erros: ${erros.join('; ')}`, 'warning', 0);
-    else mostrarAlerta(`${excluidos} arquivo(s) excluído(s) com sucesso.`, 'success');
+  // Remover da lista (só UI — não apaga do disco)
+  document.getElementById('btn-excluir-selecionados').onclick = () => {
+    const checks = [...listaEl.querySelectorAll('.item-chk:checked')];
+    if (!checks.length) return;
+    checks.forEach(c => c.closest('.pasta-item').remove());
+    atualizarBarraSelecao();
+    const restantes = listaEl.querySelectorAll('.pasta-item').length;
+    document.getElementById('pasta-count').textContent = restantes;
+    document.getElementById('chk-select-all').checked = false;
+    if (!restantes) mostrarAlerta('Nenhum arquivo na lista.', 'info');
 
     await varrerPasta(); // recarrega lista
   };
@@ -1057,20 +1092,38 @@ async function carregarLogs(filtros = {}) {
     const sBadge = log.status === 'ok' ? 'status-processado' : log.status === 'cancelado' ? 'status-parcial' : 'status-erro';
     const sLabel = log.status === 'ok' ? 'OK' : log.status === 'cancelado' ? 'Cancelado' : 'Erro';
     const acaoBadge = `<span class="log-acao-badge log-${log.acao}">${log.acao.replace(/_/g,' ')}</span>`;
+
+    // Monta coluna Pasta/Arquivo
+    let detObj = null;
+    try { detObj = log.detalhes ? JSON.parse(log.detalhes) : null; } catch {}
+    let caminhoHtml;
+    if (detObj?.pasta && detObj?.arquivo) {
+      caminhoHtml = `<span class="log-pasta">📁 ${detObj.pasta}/</span><br><span class="log-arquivo">📄 ${detObj.arquivo}</span>`;
+    } else {
+      const nome = log.arquivo_nome || '—';
+      caminhoHtml = `<span title="${nome}">${nome}</span>`;
+    }
+
     tr.innerHTML = `
-      <td style="white-space:nowrap">${formatDateTime(log.timestamp)}</td>
+      <td class="log-dt">${formatDateTime(log.timestamp)}</td>
       <td>${acaoBadge}</td>
-      <td class="td-nome" title="${log.arquivo_nome||''}">${log.arquivo_nome||'—'}</td>
+      <td class="td-nome">${caminhoHtml}</td>
       <td class="td-num">${log.quantidade_total||0}</td>
       <td class="td-num" style="color:var(--success)">${log.quantidade_ok||0}</td>
       <td class="td-num" style="color:var(--danger)">${log.quantidade_erro||0}</td>
       <td><span class="status-badge ${sBadge}">${sLabel}</span></td>
-      <td>${log.detalhes ? `<button class="log-detalhes-btn" title="${log.detalhes}">Ver</button>` : '—'}</td>`;
+      <td>${detObj ? `<button class="log-detalhes-btn" data-det='${JSON.stringify(detObj)}'>Ver</button>` : '—'}</td>`;
     tbody.appendChild(tr);
   }
 
   tbody.querySelectorAll('.log-detalhes-btn').forEach(btn => {
-    btn.addEventListener('click', () => alert(btn.title));
+    btn.addEventListener('click', () => {
+      try {
+        const d = JSON.parse(btn.dataset.det);
+        const linhas = Object.entries(d).map(([k,v]) => `${k}: ${v}`).join('\n');
+        alert(linhas);
+      } catch { alert(btn.dataset.det); }
+    });
   });
 }
 
