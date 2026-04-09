@@ -357,24 +357,48 @@
 
   <!-- ===== TAB: CONFIGURAÇÕES ===== -->
   <section id="tab-configuracoes" class="tab-content hidden">
-    <div class="config-section">
-      <h2>Conexão com Supabase</h2>
-      <div class="config-form">
-        <div class="config-row"><label>Supabase URL</label><input type="text" id="cfg-url" placeholder="https://xxxx.supabase.co" class="input-full"></div>
-        <div class="config-row"><label>Anon Key</label><input type="text" id="cfg-key" placeholder="eyJ..." class="input-full"></div>
-        <div class="config-actions">
-          <button class="btn btn-primary" id="btn-salvar-config">Salvar e conectar</button>
-          <span id="config-status" class="config-status"></span>
+    <div class="config-grid">
+
+      <!-- Conexão -->
+      <div class="config-section">
+        <div class="config-section-header">
+          <div class="config-section-icon">🔌</div>
+          <div>
+            <h2>Conexão com Supabase</h2>
+            <p>Credenciais do projeto</p>
+          </div>
+        </div>
+        <div class="config-form">
+          <div class="config-row">
+            <label>Supabase URL</label>
+            <input type="text" id="cfg-url" placeholder="https://xxxx.supabase.co" class="input-full">
+          </div>
+          <div class="config-row">
+            <label>Anon Key</label>
+            <input type="text" id="cfg-key" placeholder="eyJ..." class="input-full">
+          </div>
+          <div class="config-actions">
+            <button class="btn btn-primary" id="btn-salvar-config">Salvar e conectar</button>
+            <span id="config-status" class="config-status"></span>
+          </div>
         </div>
       </div>
-    </div>
-    <div class="config-section">
-      <h2>Criar tabelas no Supabase</h2>
-      <p class="config-desc">Execute o SQL abaixo no <strong>SQL Editor</strong> do Supabase:</p>
-      <div class="sql-block-wrapper">
-        <button class="btn-copy" id="btn-copiar-sql">📋 Copiar</button>
-        <pre class="sql-block" id="sql-block">Carregando...</pre>
+
+      <!-- SQL -->
+      <div class="config-section">
+        <div class="config-section-header">
+          <div class="config-section-icon">🗄</div>
+          <div>
+            <h2>Criar tabelas</h2>
+            <p>Execute no SQL Editor do Supabase</p>
+          </div>
+        </div>
+        <div class="sql-block-wrapper">
+          <button class="btn-copy" id="btn-copiar-sql">📋 Copiar</button>
+          <pre class="sql-block" id="sql-block">Carregando...</pre>
+        </div>
       </div>
+
     </div>
   </section>
 

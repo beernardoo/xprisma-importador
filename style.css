@@ -719,27 +719,71 @@ body {
 .btn-reprocessar:disabled { opacity: 0.4; cursor: default; }
 
 /* ===== CONFIGURAÇÕES ===== */
+/* ===== CONFIGURAÇÕES ===== */
+.config-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
 .config-section {
   background: var(--bg2);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 24px;
-  margin-bottom: 16px;
 }
 
-.config-section h2 { font-size: 15px; margin-bottom: 16px; }
+.config-section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
 
-.config-form { display: flex; flex-direction: column; gap: 12px; }
+.config-section-icon {
+  font-size: 20px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(79,142,247,0.12);
+  border-radius: 8px;
+}
+
+.config-section-header h2 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.config-section-header p {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: 2px 0 0;
+}
+
+.config-form { display: flex; flex-direction: column; gap: 14px; }
 
 .config-row { display: flex; flex-direction: column; gap: 6px; }
-.config-row label { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+.config-row label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
 
-.config-actions { display: flex; align-items: center; gap: 12px; margin-top: 4px; }
+.config-actions { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
 
 .config-status { font-size: 13px; }
 .config-ok   { color: var(--success); }
 .config-fail { color: var(--danger); }
-.config-desc { color: var(--text-muted); font-size: 13px; margin-bottom: 12px; }
+
+.config-desc { color: var(--text-muted); font-size: 12px; margin-bottom: 12px; }
 
 .sql-block-wrapper { position: relative; }
 
@@ -748,12 +792,13 @@ body {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 16px;
-  font-size: 12px;
+  font-size: 11px;
   font-family: 'Courier New', monospace;
   color: var(--info);
-  overflow-x: auto;
+  overflow: auto;
   white-space: pre;
   line-height: 1.6;
+  max-height: 320px;
 }
 
 .btn-copy {
@@ -769,6 +814,7 @@ body {
   font-size: 11px;
   transition: all 0.15s;
 }
+.btn-copy:hover { color: var(--text); border-color: var(--primary); }
 
 .btn-copy:hover { color: var(--text); border-color: var(--primary); }
 
