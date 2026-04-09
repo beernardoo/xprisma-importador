@@ -965,5 +965,9 @@ document.getElementById('btn-copiar-sql').addEventListener('click', () => {
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 
 window.addEventListener('load', () => {
-  if (!getSupabase()) mostrarAlerta('Configure as credenciais do Supabase na aba Configurações.', 'info', 0);
+  // Garante Upload Manual visível por padrão
+  document.querySelectorAll('.mode-panel').forEach(p => p.classList.add('hidden'));
+  document.getElementById('modo-manual')?.classList.remove('hidden');
+  document.querySelectorAll('.mode-option').forEach(l => l.classList.remove('active'));
+  document.getElementById('label-manual')?.classList.add('active');
 });
