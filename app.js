@@ -262,7 +262,6 @@ document.getElementById('btn-remover-arquivo').addEventListener('click', () => {
 
 document.getElementById('btn-carregar').addEventListener('click', async () => {
   if (!state.arquivoAtual) return;
-  if (!getSupabase()) { mostrarAlerta('Configure as credenciais do Supabase antes de continuar.', 'warning'); return; }
 
   limparAlertas();
 
@@ -449,7 +448,6 @@ document.getElementById('btn-analisar-direto').addEventListener('click', async (
 
 document.getElementById('btn-iniciar-disparo-direto').addEventListener('click', () => {
   if (!state.dadosDiretos.length) { mostrarAlerta('Analise os dados primeiro.', 'warning'); return; }
-  if (!getSupabase()) { mostrarAlerta('Configure as credenciais do Supabase antes de continuar.', 'warning'); return; }
   if (!state.colCpf || !state.colContrato) {
     abrirColumnMapper(Object.keys(state.dadosDiretos[0] || {}));
     return;
@@ -490,8 +488,6 @@ function parseDireto(texto) {
 // ─── PREPARAR DISPARO (pré-consent) ──────────────────────────────────────────
 
 async function prepararDisparo(rows, modo) {
-  if (!getSupabase()) { mostrarAlerta('Configure as credenciais do Supabase antes de continuar.', 'warning'); return; }
-
   // Conta novos vs duplicados
   let novos = 0, duplicados = 0;
   for (const row of rows.slice(0, 50)) { // sample check
@@ -672,8 +668,9 @@ async function iniciarProcessamento(apenasErros = false) {
       arquivoId = reg.id;
       state.pendingArquivoId = arquivoId;
     } catch (e) {
-      mostrarAlerta('Erro ao registrar no banco: ' + e.message, 'danger');
-      return;
+      console.warn('Supabase não configurado — processando sem log de arquivo:', e.message);
+      arquivoId = 'local-' + Date.now();
+      state.pendingArquivoId = arquivoId;
     }
   } else {
     arquivoId = state.reprocessarArquivoId;

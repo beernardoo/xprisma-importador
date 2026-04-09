@@ -17,7 +17,7 @@ async function dbArquivoJaProcessado(hash) {
 async function dbRegistrarArquivo(payload) {
   // payload: { nome_arquivo, hash_arquivo, tamanho_arquivo }
   const sb = getSupabase();
-  if (!sb) throw new Error('Supabase não configurado');
+  if (!sb) return { id: 'local-' + Date.now() };
   const { data, error } = await sb
     .from('arquivos_processados')
     .insert([{
@@ -100,7 +100,7 @@ async function dbRegistroJaEnviado(cpfCnpj, numeroContrato) {
 async function dbInserirRegistro(payload) {
   // payload: { cpf_cnpj, numero_contrato, arquivo_id, dados_originais }
   const sb = getSupabase();
-  if (!sb) throw new Error('Supabase não configurado');
+  if (!sb) return { id: null };
   const { data, error } = await sb
     .from('registros_processados')
     .insert([{
