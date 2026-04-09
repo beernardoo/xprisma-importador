@@ -980,8 +980,6 @@ async function varrerPasta() {
     document.getElementById('pasta-count').textContent = restantes;
     document.getElementById('chk-select-all').checked = false;
     if (!restantes) mostrarAlerta('Nenhum arquivo na lista.', 'info');
-
-    await varrerPasta(); // recarrega lista
   };
 
   if (novos === 0) mostrarAlerta('Nenhum arquivo novo encontrado.', 'info');
