@@ -107,6 +107,37 @@ function ocultarErroArquivo() {
   document.getElementById('erro-colunas-detalhe').classList.add('hidden');
 }
 
+function mostrarErroPasta(titulo, msg, colsEncontradas) {
+  document.getElementById('erro-pasta-titulo').textContent = titulo;
+  document.getElementById('erro-pasta-msg').textContent = msg;
+  document.getElementById('erro-pasta').classList.remove('hidden');
+  document.getElementById('erro-pasta').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  const detalhe = document.getElementById('erro-pasta-colunas');
+  if (colsEncontradas && colsEncontradas.length) {
+    const faltando = colsEncontradas.filter(c => !c.encontrada && c.req);
+    const aviso    = colsEncontradas.filter(c => !c.encontrada && !c.req);
+    const ok       = colsEncontradas.filter(c => c.encontrada);
+    let html = `<div class="erro-col-title">Diagnóstico das colunas</div><div class="erro-col-grid">`;
+    ok.forEach(c       => { html += `<div class="erro-col-item ok">✓ ${c.key}</div>`; });
+    aviso.forEach(c    => { html += `<div class="erro-col-item warn">? ${c.key}</div>`; });
+    faltando.forEach(c => { html += `<div class="erro-col-item miss">✕ ${c.key} — obrigatória</div>`; });
+    html += `</div>`;
+    if (faltando.length) html += `<p style="margin-top:10px;font-size:11px;color:var(--danger)">Renomeie as colunas marcadas com ✕ e tente novamente.</p>`;
+    detalhe.innerHTML = html;
+    detalhe.classList.remove('hidden');
+  } else {
+    detalhe.classList.add('hidden');
+  }
+}
+
+function ocultarErroPasta() {
+  document.getElementById('erro-pasta').classList.add('hidden');
+  document.getElementById('erro-pasta-colunas').classList.add('hidden');
+}
+
+document.getElementById('btn-fechar-erro-pasta').addEventListener('click', ocultarErroPasta);
+
 // ─── TABS ─────────────────────────────────────────────────────────────────────
 
 document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -821,16 +852,29 @@ async function varrerPasta() {
       novos++;
       item.querySelector('button').addEventListener('click', async () => {
         if (getSupabase() && await dbArquivoJaProcessado(hash)) { mostrarAlerta('Arquivo já processado.', 'warning'); return; }
+        ocultarErroPasta();
         let rows;
-        try { rows = await parseArquivo(file); } catch (e) { mostrarErroArquivo('Erro ao ler arquivo', e.message); return; }
+        try { rows = await parseArquivo(file); } catch (e) { mostrarErroPasta('Erro ao ler arquivo', e.message); return; }
         state.arquivoAtual = file;
         state.hashAtual = hash;
         state.rowsParseadas = rows;
         const colunas = Object.keys(rows[0] || {});
         const { cpfCol, contratoCol } = detectarColunas(colunas);
-        if (cpfCol && contratoCol) { state.colCpf = cpfCol; state.colContrato = contratoCol; prepararDisparo(rows, 'arquivo'); }
-        else abrirColumnMapper(colunas);
-        state.arquivosProcessadosLocalmente.add(hash);
+        const diagnostico = validarColunas(colunas);
+        if (cpfCol && contratoCol) {
+          state.colCpf = cpfCol;
+          state.colContrato = contratoCol;
+          state.arquivosProcessadosLocalmente.add(hash);
+          prepararDisparo(rows, 'arquivo');
+        } else {
+          const faltam = diagnostico.filter(c => c.req && !c.encontrada).map(c => c.key);
+          mostrarErroPasta(
+            `Colunas obrigatórias não encontradas em "${file.name}"`,
+            `Não foi possível identificar: ${faltam.join(', ')}. Verifique o cabeçalho do arquivo.`,
+            diagnostico
+          );
+          await dbRegistrarLog({ acao: 'ERRO_ARQUIVO', arquivo_nome: file.name, status: 'erro', detalhes: { motivo: 'colunas_faltando', faltam } });
+        }
       });
     }
     listaEl.appendChild(item);
