@@ -520,11 +520,73 @@ body {
 .pasta-arquivos-header {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   margin-bottom: 12px;
 }
 
 .pasta-arquivos-header h3 { font-size: 14px; }
+
+/* Checkbox personalizado */
+.pasta-check-all-wrap,
+.pasta-item-check-wrap {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.pasta-check-all-wrap input,
+.pasta-item-check-wrap input { display: none; }
+
+.custom-check {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg3);
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pasta-check-all-wrap input:checked ~ .custom-check,
+.pasta-item-check-wrap input:checked ~ .custom-check {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.pasta-check-all-wrap input:checked ~ .custom-check::after,
+.pasta-item-check-wrap input:checked ~ .custom-check::after {
+  content: '✓';
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Barra de exclusão */
+.pasta-delete-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+  animation: fadeIn 0.2s ease;
+}
+
+.pasta-delete-bar.hidden { display: none; }
+
+.sel-count {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Item selecionado */
+.pasta-item.selecionado {
+  border-color: rgba(239,68,68,0.35);
+  background: rgba(239,68,68,0.06);
+}
 
 .badge {
   background: var(--primary);

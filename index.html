@@ -176,8 +176,16 @@
         </div>
         <div id="pasta-arquivos-encontrados" class="pasta-arquivos hidden">
           <div class="pasta-arquivos-header">
+            <label class="pasta-check-all-wrap" title="Selecionar todos">
+              <input type="checkbox" id="chk-select-all">
+              <span class="custom-check"></span>
+            </label>
             <h3>Arquivos na pasta</h3>
             <span id="pasta-count" class="badge">0</span>
+            <div class="pasta-delete-bar hidden" id="pasta-delete-bar">
+              <span id="pasta-sel-count" class="sel-count">0 selecionados</span>
+              <button class="btn btn-danger btn-sm" id="btn-excluir-selecionados">🗑 Excluir selecionados</button>
+            </div>
           </div>
           <div id="lista-pasta-arquivos" class="pasta-lista"></div>
         </div>

@@ -838,7 +838,28 @@ async function varrerPasta() {
   document.getElementById('pasta-count').textContent = encontrados.length;
   document.getElementById('pasta-arquivos-encontrados').classList.remove('hidden');
 
+  // Reseta seleção
+  document.getElementById('chk-select-all').checked = false;
+  document.getElementById('pasta-delete-bar').classList.add('hidden');
+
   if (!encontrados.length) { listaEl.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:8px">Nenhum arquivo XLSX/CSV encontrado.</div>'; mostrarAlerta('Nenhum arquivo encontrado na pasta.', 'info'); return; }
+
+  const atualizarBarraSelecao = () => {
+    const checks = listaEl.querySelectorAll('.item-chk');
+    const selecionados = [...checks].filter(c => c.checked);
+    const bar = document.getElementById('pasta-delete-bar');
+    const chkAll = document.getElementById('chk-select-all');
+    if (selecionados.length > 0) {
+      bar.classList.remove('hidden');
+      document.getElementById('pasta-sel-count').textContent = `${selecionados.length} selecionado(s)`;
+      chkAll.checked = selecionados.length === checks.length;
+      chkAll.indeterminate = selecionados.length > 0 && selecionados.length < checks.length;
+    } else {
+      bar.classList.add('hidden');
+      chkAll.checked = false;
+      chkAll.indeterminate = false;
+    }
+  };
 
   let novos = 0;
   for (const { file, hash, jaProcessado } of encontrados) {
@@ -846,7 +867,24 @@ async function varrerPasta() {
     item.className = 'pasta-item';
     const sc = jaProcessado ? 'status-processado' : 'status-novo';
     const st = jaProcessado ? 'Já processado' : 'Novo';
-    item.innerHTML = `<span>📄</span><span class="pasta-item-nome">${file.name}</span><span class="pasta-item-size">${formatBytes(file.size)}</span><span class="pasta-item-status ${sc}">${st}</span>${!jaProcessado ? `<button class="btn btn-success" style="padding:4px 10px;font-size:11px">Processar</button>` : ''}`;
+
+    item.innerHTML = `
+      <label class="pasta-item-check-wrap" title="Selecionar">
+        <input type="checkbox" class="item-chk" data-nome="${file.name}">
+        <span class="custom-check"></span>
+      </label>
+      <span>📄</span>
+      <span class="pasta-item-nome">${file.name}</span>
+      <span class="pasta-item-size">${formatBytes(file.size)}</span>
+      <span class="pasta-item-status ${sc}">${st}</span>
+      ${!jaProcessado ? `<button class="btn btn-success" style="padding:4px 10px;font-size:11px">Processar</button>` : ''}
+    `;
+
+    // Checkbox → highlight + barra
+    item.querySelector('.item-chk').addEventListener('change', function() {
+      item.classList.toggle('selecionado', this.checked);
+      atualizarBarraSelecao();
+    });
 
     if (!jaProcessado) {
       novos++;
@@ -879,6 +917,37 @@ async function varrerPasta() {
     }
     listaEl.appendChild(item);
   }
+
+  // Select All
+  document.getElementById('chk-select-all').onchange = function() {
+    listaEl.querySelectorAll('.item-chk').forEach(c => {
+      c.checked = this.checked;
+      c.closest('.pasta-item').classList.toggle('selecionado', this.checked);
+    });
+    atualizarBarraSelecao();
+  };
+
+  // Excluir selecionados
+  document.getElementById('btn-excluir-selecionados').onclick = async () => {
+    const selecionados = [...listaEl.querySelectorAll('.item-chk:checked')].map(c => c.dataset.nome);
+    if (!selecionados.length) return;
+    if (!confirm(`Excluir ${selecionados.length} arquivo(s) da pasta?\n\n${selecionados.join('\n')}`)) return;
+
+    let excluidos = 0, erros = [];
+    for (const nome of selecionados) {
+      try {
+        await state.dirHandle.removeEntry(nome);
+        excluidos++;
+      } catch (e) {
+        erros.push(`${nome}: ${e.message}`);
+      }
+    }
+
+    if (erros.length) mostrarAlerta(`${excluidos} excluído(s). Erros: ${erros.join('; ')}`, 'warning', 0);
+    else mostrarAlerta(`${excluidos} arquivo(s) excluído(s) com sucesso.`, 'success');
+
+    await varrerPasta(); // recarrega lista
+  };
 
   if (novos === 0) mostrarAlerta('Nenhum arquivo novo encontrado.', 'info');
   else mostrarAlerta(`${novos} arquivo(s) novo(s) encontrado(s).`, 'success');
