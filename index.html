@@ -88,6 +88,25 @@
         <button class="btn btn-primary" id="btn-selecionar">Selecionar arquivo</button>
         <input type="file" id="input-arquivo" accept=".xlsx,.xls,.csv" hidden>
         <p class="upload-formats">Formatos: XLSX, XLS, CSV</p>
+        <div class="upload-layout-hint">
+          <span class="layout-hint-label">Layout esperado:</span>
+          <div class="layout-hint-cols">
+            <span class="col-tag col-req" title="Obrigatório">CPF_CNPJ</span>
+            <span class="col-sep">;</span>
+            <span class="col-tag col-req" title="Obrigatório">NUMERO_CONTRATO</span>
+            <span class="col-sep">;</span>
+            <span class="col-tag">NOME</span>
+            <span class="col-sep">;</span>
+            <span class="col-tag">TELEFONE</span>
+            <span class="col-sep">;</span>
+            <span class="col-tag">VALOR_DIVIDA</span>
+            <span class="col-sep">;</span>
+            <span class="col-tag">DATA_VENCIMENTO</span>
+            <span class="col-sep">;</span>
+            <span class="col-tag">DIAS_ATRASO</span>
+          </div>
+          <span class="layout-hint-obs">🔴 Obrigatórias &nbsp;⚪ Recomendadas</span>
+        </div>
       </div>
 
       <div id="arquivo-info" class="arquivo-info hidden">
@@ -119,6 +138,7 @@
             <p id="erro-arquivo-msg">—</p>
           </div>
         </div>
+        <div id="erro-colunas-detalhe" class="erro-colunas-detalhe hidden"></div>
         <button class="btn btn-warning" id="btn-download-template-erro">📥 Baixar layout CSV de exemplo</button>
       </div>
     </div>

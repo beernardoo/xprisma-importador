@@ -54,16 +54,57 @@ function mostrarAlerta(msg, tipo = 'info', duracao = 5000) {
 
 function limparAlertas() { document.getElementById('alertas').innerHTML = ''; }
 
-function mostrarErroArquivo(titulo, msg) {
+// Colunas esperadas para mapeamento de disparo
+const COLUNAS_ESPERADAS = [
+  { key: 'CPF_CNPJ',         req: true,  aliases: ['cpf','cnpj','cpf_cnpj','cpfcnpj','documento'] },
+  { key: 'NUMERO_CONTRATO',  req: true,  aliases: ['contrato','numero_contrato','num_contrato','nr_contrato'] },
+  { key: 'NOME',             req: false, aliases: ['nome','name','razao','cliente'] },
+  { key: 'TELEFONE',         req: false, aliases: ['telefone','phone','tel','celular','fone','whatsapp'] },
+  { key: 'VALOR_DIVIDA',     req: false, aliases: ['valor','divida','saldo','debito'] },
+  { key: 'DATA_VENCIMENTO',  req: false, aliases: ['vencimento','vcto','vecto','data'] },
+  { key: 'DIAS_ATRASO',      req: false, aliases: ['dias','atraso','vencidos'] },
+];
+
+function validarColunas(colunas) {
+  const norm = s => String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[\s_-]+/g,'');
+  const colsNorm = colunas.map(c => norm(c));
+  return COLUNAS_ESPERADAS.map(col => {
+    const encontrada = col.aliases.some(a => colsNorm.some(c => c.includes(a)));
+    return { ...col, encontrada };
+  });
+}
+
+function mostrarErroArquivo(titulo, msg, colsEncontradas) {
   document.getElementById('erro-arquivo-titulo').textContent = titulo;
   document.getElementById('erro-arquivo-msg').textContent = msg;
   document.getElementById('erro-arquivo').classList.remove('hidden');
   document.getElementById('arquivo-info').classList.add('hidden');
   document.getElementById('upload-area').classList.add('hidden');
+
+  const detalhe = document.getElementById('erro-colunas-detalhe');
+  if (colsEncontradas && colsEncontradas.length) {
+    const faltando = colsEncontradas.filter(c => !c.encontrada && c.req);
+    const aviso    = colsEncontradas.filter(c => !c.encontrada && !c.req);
+    const ok       = colsEncontradas.filter(c => c.encontrada);
+    let html = `<div class="erro-col-title">Diagnóstico das colunas</div>`;
+    html += `<div class="erro-col-grid">`;
+    ok.forEach(c      => { html += `<div class="erro-col-item ok">✓ ${c.key}</div>`; });
+    aviso.forEach(c   => { html += `<div class="erro-col-item warn">? ${c.key}</div>`; });
+    faltando.forEach(c => { html += `<div class="erro-col-item miss">✕ ${c.key} — obrigatória</div>`; });
+    html += `</div>`;
+    if (faltando.length) {
+      html += `<p style="margin-top:10px;font-size:11px;color:var(--danger)">Renomeie as colunas marcadas com ✕ e tente novamente.</p>`;
+    }
+    detalhe.innerHTML = html;
+    detalhe.classList.remove('hidden');
+  } else {
+    detalhe.classList.add('hidden');
+  }
 }
 
 function ocultarErroArquivo() {
   document.getElementById('erro-arquivo').classList.add('hidden');
+  document.getElementById('erro-colunas-detalhe').classList.add('hidden');
 }
 
 // ─── TABS ─────────────────────────────────────────────────────────────────────
@@ -207,13 +248,20 @@ document.getElementById('btn-carregar').addEventListener('click', async () => {
 
   const colunas = Object.keys(rows[0]);
   const { cpfCol, contratoCol } = detectarColunas(colunas);
+  const diagnostico = validarColunas(colunas);
 
   if (cpfCol && contratoCol) {
     state.colCpf = cpfCol;
     state.colContrato = contratoCol;
     prepararDisparo(rows, 'arquivo');
   } else {
-    abrirColumnMapper(colunas);
+    const faltam = diagnostico.filter(c => c.req && !c.encontrada).map(c => c.key);
+    mostrarErroArquivo(
+      'Colunas obrigatórias não encontradas',
+      `Não foi possível identificar: ${faltam.join(', ')}. Verifique o cabeçalho do arquivo.`,
+      diagnostico
+    );
+    await dbRegistrarLog({ acao: 'ERRO_ARQUIVO', arquivo_nome: state.arquivoAtual.name, status: 'erro', detalhes: { motivo: 'colunas_faltando', faltam } });
   }
 });
 

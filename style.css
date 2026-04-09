@@ -223,6 +223,106 @@ body {
 .upload-sub { color: var(--text-muted); font-size: 12px; }
 .upload-formats { color: var(--text-muted); font-size: 11px; }
 
+.upload-layout-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 12px 16px;
+  background: rgba(79,142,247,0.06);
+  border: 1px dashed rgba(79,142,247,0.25);
+  border-radius: var(--radius-sm);
+  width: 100%;
+}
+
+.layout-hint-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-muted);
+}
+
+.layout-hint-cols {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+}
+
+.col-tag {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+}
+
+.col-tag.col-req {
+  background: rgba(79,142,247,0.12);
+  border-color: rgba(79,142,247,0.4);
+  color: var(--primary);
+}
+
+.col-sep {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.layout-hint-obs {
+  font-size: 10px;
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+/* ===== ERRO COLUNAS DETALHE ===== */
+.erro-colunas-detalhe {
+  margin: 10px 0 0;
+  padding: 12px 14px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+}
+
+.erro-colunas-detalhe.hidden { display: none; }
+
+.erro-col-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text-muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.erro-col-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.erro-col-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: 'Courier New', monospace;
+}
+
+.erro-col-item.ok   { background: var(--success-bg); color: var(--success); border: 1px solid rgba(34,197,94,0.3); }
+.erro-col-item.miss { background: var(--danger-bg);  color: var(--danger);  border: 1px solid rgba(239,68,68,0.3); }
+.erro-col-item.warn { background: var(--warning-bg); color: var(--warning); border: 1px solid rgba(245,158,11,0.3); }
+
 /* ===== ARQUIVO INFO ===== */
 .arquivo-info {
   background: var(--bg2);
