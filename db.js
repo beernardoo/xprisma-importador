@@ -167,28 +167,56 @@ async function dbAtualizarStatusRegistro(cpfCnpj, numeroContrato, status) {
 
 // ─── LOGS DE ACESSO ───────────────────────────────────────────────────────────
 
+const LOGS_KEY     = 'xprisma_logs';
+const LOGS_MAX     = 500;
+
+function _localSalvarLog(entry) {
+  try {
+    const lista = JSON.parse(localStorage.getItem(LOGS_KEY) || '[]');
+    lista.unshift(entry);
+    if (lista.length > LOGS_MAX) lista.length = LOGS_MAX;
+    localStorage.setItem(LOGS_KEY, JSON.stringify(lista));
+  } catch (e) { console.warn('localStorage indisponível:', e.message); }
+}
+
+function _localListarLogs(filtros = {}) {
+  try {
+    let lista = JSON.parse(localStorage.getItem(LOGS_KEY) || '[]');
+    if (filtros.acao)   lista = lista.filter(l => l.acao === filtros.acao);
+    if (filtros.status) lista = lista.filter(l => l.status === filtros.status);
+    if (filtros.data)   lista = lista.filter(l => l.timestamp && l.timestamp.startsWith(filtros.data));
+    return lista.slice(0, 200);
+  } catch { return []; }
+}
+
 async function dbRegistrarLog(payload) {
   // payload: { acao, arquivo_nome?, quantidade_total?, quantidade_ok?, quantidade_erro?, status, detalhes? }
+  const entry = {
+    id:               Date.now(),
+    timestamp:        new Date().toISOString(),
+    acao:             payload.acao,
+    arquivo_nome:     payload.arquivo_nome || null,
+    quantidade_total: payload.quantidade_total || 0,
+    quantidade_ok:    payload.quantidade_ok   || 0,
+    quantidade_erro:  payload.quantidade_erro  || 0,
+    status:           payload.status || 'ok',
+    detalhes:         payload.detalhes ? JSON.stringify(payload.detalhes) : null,
+  };
+
   const sb = getSupabase();
-  if (!sb) return;
+  if (!sb) { _localSalvarLog(entry); return; }
   try {
-    await sb.from('logs_acesso').insert([{
-      acao:              payload.acao,
-      arquivo_nome:      payload.arquivo_nome || null,
-      quantidade_total:  payload.quantidade_total || 0,
-      quantidade_ok:     payload.quantidade_ok   || 0,
-      quantidade_erro:   payload.quantidade_erro  || 0,
-      status:            payload.status || 'ok',
-      detalhes:          payload.detalhes ? JSON.stringify(payload.detalhes) : null,
-    }]);
+    await sb.from('logs_acesso').insert([entry]);
   } catch (e) {
-    console.warn('Log não registrado:', e.message);
+    console.warn('Supabase indisponível, salvando log local:', e.message);
+    _localSalvarLog(entry);
   }
 }
 
 async function dbListarLogs(filtros = {}) {
   const sb = getSupabase();
-  if (!sb) return [];
+  if (!sb) return _localListarLogs(filtros);
+
   let q = sb
     .from('logs_acesso')
     .select('*')
@@ -200,7 +228,10 @@ async function dbListarLogs(filtros = {}) {
   if (filtros.data)   q = q.gte('timestamp', filtros.data).lte('timestamp', filtros.data + 'T23:59:59');
 
   const { data, error } = await q;
-  if (error) { console.error(error); return []; }
+  if (error) {
+    console.warn('Erro Supabase, usando logs locais:', error.message);
+    return _localListarLogs(filtros);
+  }
   return data || [];
 }
 
