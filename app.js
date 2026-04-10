@@ -660,20 +660,49 @@ async function dispararRegistroFormulario(row, cpf, contrato) {
     // Gera token reCAPTCHA v3 diretamente no browser
     const captchaToken = await gerarTokenRecaptcha();
 
-    // Gera campos de rastreamento no mesmo formato do preenchimento manual
-    const fbEventId  = ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+    // Gera campos de rastreamento no mesmo formato do widget original
+    const uuid = () => ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
       (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
-    const gaRand1    = Math.floor(Math.random() * 2147483647);
-    const gaRand2    = Math.floor(Date.now() / 1000);
-    const gaClientId = `GA1.3.${gaRand1}.${gaRand2}`;
-    const pageUrl    = `https://api.itscom.com.br/widget/form/${XPRISMA_FORM_ID}`;
+    const fbEventId   = uuid();
+    const sessionId   = uuid();
+    const gaRand1     = Math.floor(Math.random() * 2147483647);
+    const gaRand2     = Math.floor(Date.now() / 1000);
+    const gaClientId  = `GA1.3.${gaRand1}.${gaRand2}`;
+    const pageUrlStr  = `https://api.itscom.com.br/widget/form/${XPRISMA_FORM_ID}`;
+    const timeSpent   = Math.floor(Math.random() * 60) + 20;
+
+    // eventData no mesmo formato que o widget envia (Detalhes da página no itscom)
+    const eventData = {
+      source:            'direct',
+      referrer:          '',
+      keyword:           '',
+      adSource:          '',
+      url_params:        {},
+      page:              { url: pageUrlStr, title: '' },
+      timestamp:         Date.now(),
+      campaign:          '',
+      contactSessionIds: { ids: [sessionId] },
+      fbp:               '',
+      fbc:               '',
+      type:              'page-visit',
+      parentId:          XPRISMA_FORM_ID,
+      pageVisitType:     'form',
+      domain:            'api.itscom.com.br',
+      version:           'v3',
+      parentName:        'Autorização de Opt-in para Ligações e Mensagens de Texto',
+      fingerprint:       null,
+      documentURL:       pageUrlStr,
+      gaClientId:        gaClientId,
+      fbEventId:         fbEventId,
+      medium:            'form',
+      mediumId:          XPRISMA_FORM_ID,
+    };
 
     // Objeto interno formData exigido pelo formulário itscom
-    // Os campos de tracking vão DENTRO do JSON formData, não como campos separados
     const formDataObj = {
       full_name:            nome,
-      phone:                formatarTelefoneDisparo(telefone),
       email:                email,
+      phone:                formatarTelefoneDisparo(telefone),
       kwzvkvRVPG0XO2wsPJsY: cpf,
       iWG7aSZIvHiuHKfUKoU3: vencimento,
       oave3BWDEY9YcIub1lo5: contrato,
@@ -682,9 +711,11 @@ async function dispararRegistroFormulario(row, cpf, contrato) {
       terms_and_conditions:  XPRISMA_TERMS,
       formId:                XPRISMA_FORM_ID,
       location_id:           XPRISMA_LOCATION_ID,
-      fbEventId:             fbEventId,
-      gaClientId:            gaClientId,
-      pageUrl:               pageUrl,
+      sessionId:             sessionId,
+      eventData:             eventData,
+      Timezone:              'America/Sao_Paulo (GMT-03:00)',
+      paymentContactId:      {},
+      timeSpent:             timeSpent,
     };
 
     // Monta FormData para o endpoint itscom
@@ -709,7 +740,8 @@ async function dispararRegistroFormulario(row, cpf, contrato) {
     try { data = JSON.parse(rawText); } catch { data = { raw: rawText }; }
 
     if (status >= 200 && status < 300) {
-      return { success: true, contactId: data?.contact?.id, submissionId: data?.submissionId, status };
+      console.log('[XPrisma] Resposta itscom:', JSON.stringify(data));
+      return { success: true, contactId: data?.contact?.id, submissionId: data?.submissionId, rawData: data, status };
     }
     return { success: false, error: `HTTP ${status}`, data };
 
@@ -837,7 +869,8 @@ async function iniciarProcessamento(apenasErros = false) {
           await dbInserirRegistro({ cpf_cnpj: cpf, numero_contrato: contrato, arquivo_id: arquivoId, dados_originais: row, status: statusDisparo });
           if (resultDisparo.success) {
             contEnviados++;
-            addLog(`${cpf} / ${contrato} — enviado ✓ (contactId: ${resultDisparo.contactId || '—'})`, 'ok');
+            const resposta = JSON.stringify(resultDisparo.rawData || {}).slice(0, 400);
+            addLog(`${cpf} / ${contrato} — enviado ✓ (contactId: ${resultDisparo.contactId || '—'}) | resp: ${resposta}`, 'ok');
           } else {
             contErros++;
             const detalheErro = resultDisparo.data ? JSON.stringify(resultDisparo.data).slice(0, 300) : '';
