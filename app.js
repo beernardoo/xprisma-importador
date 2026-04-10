@@ -676,22 +676,22 @@ async function dispararRegistroFormulario(row, cpf, contrato) {
       location_id:           XPRISMA_LOCATION_ID,
     };
 
-    // Monta FormData (browser nativo)
-    const fd = new FormData();
-    fd.append('formData',   JSON.stringify(formDataObj));
-    fd.append('locationId', XPRISMA_LOCATION_ID);
-    fd.append('formId',     XPRISMA_FORM_ID);
-    if (captchaToken) fd.append('captchaV3', captchaToken);
-
-    // POST direto do browser (Cloudflare cookies + reCAPTCHA presentes)
-    const resp = await fetch(XPRISMA_ENDPOINT, {
-      method: 'POST',
-      body:   fd,
+    // POST via proxy do servidor — anônimo, sem cookies/cache do browser
+    const resp = await fetch('/api/submit', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        formData:   formDataObj,
+        locationId: XPRISMA_LOCATION_ID,
+        formId:     XPRISMA_FORM_ID,
+        captchaV3:  captchaToken || null,
+      }),
     });
 
     const status = resp.status;
+    const rawText = await resp.text();
     let data;
-    try { data = await resp.json(); } catch { data = { raw: await resp.text() }; }
+    try { data = JSON.parse(rawText); } catch { data = { raw: rawText }; }
 
     if (status >= 200 && status < 300) {
       return { success: true, contactId: data?.contact?.id, submissionId: data?.submissionId, status };
