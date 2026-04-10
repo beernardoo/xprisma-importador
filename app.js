@@ -56,13 +56,13 @@ function limparAlertas() { document.getElementById('alertas').innerHTML = ''; }
 
 // Colunas esperadas para mapeamento de disparo
 const COLUNAS_ESPERADAS = [
-  { key: 'CPF_CNPJ',         req: true,  aliases: ['cpf','cnpj','cpf_cnpj','cpfcnpj','documento'] },
-  { key: 'NUMERO_CONTRATO',  req: true,  aliases: ['contrato','numero_contrato','num_contrato','nr_contrato'] },
-  { key: 'NOME',             req: false, aliases: ['nome','name','razao','cliente'] },
-  { key: 'TELEFONE',         req: false, aliases: ['telefone','phone','tel','celular','fone','whatsapp'] },
-  { key: 'VALOR_DIVIDA',     req: false, aliases: ['valor','divida','saldo','debito'] },
-  { key: 'DATA_VENCIMENTO',  req: false, aliases: ['vencimento','vcto','vecto','data'] },
-  { key: 'DIAS_ATRASO',      req: false, aliases: ['dias','atraso','vencidos'] },
+  { key: 'CPF_CNPJ',         req: true, aliases: ['cpf','cnpj','cpf_cnpj','cpfcnpj','documento'] },
+  { key: 'NUMERO_CONTRATO',  req: true, aliases: ['contrato','numero_contrato','num_contrato','nr_contrato'] },
+  { key: 'NOME',             req: true, aliases: ['nome','name','razao','cliente'] },
+  { key: 'TELEFONE',         req: true, aliases: ['telefone','phone','tel','celular','fone','whatsapp'] },
+  { key: 'VALOR_DIVIDA',     req: true, aliases: ['valor','divida','saldo','debito'] },
+  { key: 'DATA_VENCIMENTO',  req: true, aliases: ['vencimento','vcto','vecto','data'] },
+  { key: 'DIAS_ATRASO',      req: true, aliases: ['dias','atraso','vencidos'] },
 ];
 
 function validarColunas(colunas) {
@@ -498,15 +498,32 @@ async function prepararDisparo(rows, modo) {
     return '';
   };
 
+  // Helper para encontrar valor de qualquer campo pelo alias
+  const findCampo = (row, aliases) => {
+    for (const k of Object.keys(row)) {
+      if (aliases.some(a => normCol(k).includes(a))) return String(row[k] || '').trim();
+    }
+    return '';
+  };
+
   const errosValidacao = [];
   rows.forEach((row, i) => {
     const linha = i + 2; // +2 porque linha 1 é cabeçalho
-    const cpf = normalizarCpf(row[state.colCpf]);
-    const con = String(row[state.colContrato] || '').trim();
-    const tel = findTelefone(row);
-    if (!cpf)  errosValidacao.push(`Linha ${linha}: CPF/CNPJ vazio`);
-    if (!con)  errosValidacao.push(`Linha ${linha}: Número de contrato vazio`);
-    if (!tel)  errosValidacao.push(`Linha ${linha}: Telefone vazio`);
+    const cpf      = normalizarCpf(row[state.colCpf]);
+    const contrato = String(row[state.colContrato] || '').trim();
+    const nome     = findCampo(row, ['nome','name','razao','cliente']);
+    const telefone = findTelefone(row);
+    const valor    = findCampo(row, ['valor','divida','saldo','debito']);
+    const vencto   = findCampo(row, ['vencimento','vcto','vecto','data']);
+    const dias     = findCampo(row, ['dias','atraso','vencidos']);
+
+    if (!cpf)      errosValidacao.push(`Linha ${linha}: CPF/CNPJ vazio`);
+    if (!contrato) errosValidacao.push(`Linha ${linha}: Número de contrato vazio`);
+    if (!nome)     errosValidacao.push(`Linha ${linha}: Nome vazio`);
+    if (!telefone) errosValidacao.push(`Linha ${linha}: Telefone vazio`);
+    if (!valor)    errosValidacao.push(`Linha ${linha}: Valor da dívida vazio`);
+    if (!vencto)   errosValidacao.push(`Linha ${linha}: Data de vencimento vazia`);
+    if (!dias)     errosValidacao.push(`Linha ${linha}: Dias de atraso vazio`);
   });
 
   if (errosValidacao.length > 0) {
@@ -763,12 +780,23 @@ async function iniciarProcessamento(apenasErros = false) {
       return '';
     })();
 
-    if (!cpf || !contrato) {
-      contIgnorados++;
-      addLog(`Linha ${i+1}: CPF/CNPJ ou contrato vazio — ignorado`, 'skip');
-    } else if (!telefoneRaw) {
+    const nomeRaw     = (() => { for (const k of Object.keys(row)) { const kn = String(k).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[\s_-]+/g,''); if (['nome','name','razao','cliente'].some(p=>kn.includes(p))) return String(row[k]||'').trim(); } return ''; })();
+    const valorRaw    = (() => { for (const k of Object.keys(row)) { const kn = String(k).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[\s_-]+/g,''); if (['valor','divida','saldo','debito'].some(p=>kn.includes(p))) return String(row[k]||'').trim(); } return ''; })();
+    const venctoRaw   = (() => { for (const k of Object.keys(row)) { const kn = String(k).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[\s_-]+/g,''); if (['vencimento','vcto','vecto','data'].some(p=>kn.includes(p))) return String(row[k]||'').trim(); } return ''; })();
+    const diasRaw     = (() => { for (const k of Object.keys(row)) { const kn = String(k).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[\s_-]+/g,''); if (['dias','atraso','vencidos'].some(p=>kn.includes(p))) return String(row[k]||'').trim(); } return ''; })();
+
+    const camposVazios = [];
+    if (!cpf)        camposVazios.push('CPF/CNPJ');
+    if (!contrato)   camposVazios.push('Contrato');
+    if (!nomeRaw)    camposVazios.push('Nome');
+    if (!telefoneRaw) camposVazios.push('Telefone');
+    if (!valorRaw)   camposVazios.push('Valor');
+    if (!venctoRaw)  camposVazios.push('Vencimento');
+    if (!diasRaw)    camposVazios.push('Dias atraso');
+
+    if (camposVazios.length > 0) {
       contErros++;
-      addLog(`Linha ${i+1}: ${cpf} / ${contrato} — ERRO: telefone vazio`, 'err');
+      addLog(`Linha ${i+1}: ERRO — campo(s) obrigatório(s) vazio(s): ${camposVazios.join(', ')}`, 'err');
     } else {
       try {
         const jaEnviado = await dbRegistroJaEnviado(cpf, contrato);
