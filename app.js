@@ -660,6 +660,14 @@ async function dispararRegistroFormulario(row, cpf, contrato) {
     // Gera token reCAPTCHA v3 diretamente no browser
     const captchaToken = await gerarTokenRecaptcha();
 
+    // Gera campos de rastreamento no mesmo formato do preenchimento manual
+    const fbEventId  = ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+      (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
+    const gaRand1    = Math.floor(Math.random() * 2147483647);
+    const gaRand2    = Math.floor(Date.now() / 1000);
+    const gaClientId = `GA1.3.${gaRand1}.${gaRand2}`;
+    const pageUrl    = `https://api.itscom.com.br/widget/form/${XPRISMA_FORM_ID}`;
+
     // Objeto interno formData exigido pelo formulário itscom
     // Ordem: full_name, phone, email, CPF, vencimento, contrato, valor, dias
     const formDataObj = {
@@ -681,6 +689,9 @@ async function dispararRegistroFormulario(row, cpf, contrato) {
     fd.append('formData',   JSON.stringify(formDataObj));
     fd.append('locationId', XPRISMA_LOCATION_ID);
     fd.append('formId',     XPRISMA_FORM_ID);
+    fd.append('fbEventId',  fbEventId);
+    fd.append('gaClientId', gaClientId);
+    fd.append('pageUrl',    pageUrl);
     if (captchaToken) fd.append('captchaV3', captchaToken);
 
     // POST anônimo — credentials:omit impede envio de cookies de sessão
