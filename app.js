@@ -488,6 +488,36 @@ function parseDireto(texto) {
 // ─── PREPARAR DISPARO (pré-consent) ──────────────────────────────────────────
 
 async function prepararDisparo(rows, modo) {
+  // ─── VALIDAÇÃO DE CAMPOS OBRIGATÓRIOS ────────────────────────────────────────
+  const normCol = s => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[\s_-]+/g, '');
+  const findTelefone = row => {
+    for (const k of Object.keys(row)) {
+      if (['telefone','phone','tel','celular','fone','whatsapp'].some(p => normCol(k).includes(p)))
+        return String(row[k] || '').replace(/\D/g, '');
+    }
+    return '';
+  };
+
+  const errosValidacao = [];
+  rows.forEach((row, i) => {
+    const linha = i + 2; // +2 porque linha 1 é cabeçalho
+    const cpf = normalizarCpf(row[state.colCpf]);
+    const con = String(row[state.colContrato] || '').trim();
+    const tel = findTelefone(row);
+    if (!cpf)  errosValidacao.push(`Linha ${linha}: CPF/CNPJ vazio`);
+    if (!con)  errosValidacao.push(`Linha ${linha}: Número de contrato vazio`);
+    if (!tel)  errosValidacao.push(`Linha ${linha}: Telefone vazio`);
+  });
+
+  if (errosValidacao.length > 0) {
+    const msg = `⚠️ ${errosValidacao.length} problema(s) encontrado(s) antes do envio:\n\n` +
+      errosValidacao.slice(0, 10).join('\n') +
+      (errosValidacao.length > 10 ? `\n...e mais ${errosValidacao.length - 10} erros.` : '') +
+      '\n\nCorrija os dados e tente novamente.';
+    mostrarAlerta(msg.replace(/\n/g, '<br>'), 'danger', 0);
+    return;
+  }
+
   // Conta novos vs duplicados
   let novos = 0, duplicados = 0;
   for (const row of rows.slice(0, 50)) { // sample check
@@ -724,9 +754,21 @@ async function iniciarProcessamento(apenasErros = false) {
     const cpf = normalizarCpf(row[state.colCpf]);
     const contrato = String(row[state.colContrato] || '').trim();
 
+    const telefoneRaw = (() => {
+      for (const k of Object.keys(row)) {
+        const kn = String(k).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[\s_-]+/g,'');
+        if (['telefone','phone','tel','celular','fone','whatsapp'].some(p => kn.includes(p)))
+          return String(row[k] || '').replace(/\D/g, '');
+      }
+      return '';
+    })();
+
     if (!cpf || !contrato) {
       contIgnorados++;
       addLog(`Linha ${i+1}: CPF/CNPJ ou contrato vazio — ignorado`, 'skip');
+    } else if (!telefoneRaw) {
+      contErros++;
+      addLog(`Linha ${i+1}: ${cpf} / ${contrato} — ERRO: telefone vazio`, 'err');
     } else {
       try {
         const jaEnviado = await dbRegistroJaEnviado(cpf, contrato);
