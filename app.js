@@ -669,7 +669,7 @@ async function dispararRegistroFormulario(row, cpf, contrato) {
     const pageUrl    = `https://api.itscom.com.br/widget/form/${XPRISMA_FORM_ID}`;
 
     // Objeto interno formData exigido pelo formulário itscom
-    // Ordem: full_name, phone, email, CPF, vencimento, contrato, valor, dias
+    // Os campos de tracking vão DENTRO do JSON formData, não como campos separados
     const formDataObj = {
       full_name:            nome,
       phone:                formatarTelefoneDisparo(telefone),
@@ -682,6 +682,9 @@ async function dispararRegistroFormulario(row, cpf, contrato) {
       terms_and_conditions:  XPRISMA_TERMS,
       formId:                XPRISMA_FORM_ID,
       location_id:           XPRISMA_LOCATION_ID,
+      fbEventId:             fbEventId,
+      gaClientId:            gaClientId,
+      pageUrl:               pageUrl,
     };
 
     // Monta FormData para o endpoint itscom
@@ -689,9 +692,6 @@ async function dispararRegistroFormulario(row, cpf, contrato) {
     fd.append('formData',   JSON.stringify(formDataObj));
     fd.append('locationId', XPRISMA_LOCATION_ID);
     fd.append('formId',     XPRISMA_FORM_ID);
-    fd.append('fbEventId',  fbEventId);
-    fd.append('gaClientId', gaClientId);
-    fd.append('pageUrl',    pageUrl);
     if (captchaToken) fd.append('captchaV3', captchaToken);
 
     // POST anônimo — credentials:omit impede envio de cookies de sessão
@@ -840,7 +840,8 @@ async function iniciarProcessamento(apenasErros = false) {
             addLog(`${cpf} / ${contrato} — enviado ✓ (contactId: ${resultDisparo.contactId || '—'})`, 'ok');
           } else {
             contErros++;
-            addLog(`${cpf} / ${contrato} — ERRO disparo: ${resultDisparo.error}`, 'err');
+            const detalheErro = resultDisparo.data ? JSON.stringify(resultDisparo.data).slice(0, 300) : '';
+            addLog(`${cpf} / ${contrato} — ERRO disparo: ${resultDisparo.error} ${detalheErro}`, 'err');
             try { await dbMarcarRegistroErro(cpf, contrato, arquivoId, row); } catch {}
           }
         }
