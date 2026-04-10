@@ -676,16 +676,20 @@ async function dispararRegistroFormulario(row, cpf, contrato) {
       location_id:           XPRISMA_LOCATION_ID,
     };
 
-    // POST via proxy do servidor — anônimo, sem cookies/cache do browser
-    const resp = await fetch('/api/submit', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({
-        formData:   formDataObj,
-        locationId: XPRISMA_LOCATION_ID,
-        formId:     XPRISMA_FORM_ID,
-        captchaV3:  captchaToken || null,
-      }),
+    // Monta FormData para o endpoint itscom
+    const fd = new FormData();
+    fd.append('formData',   JSON.stringify(formDataObj));
+    fd.append('locationId', XPRISMA_LOCATION_ID);
+    fd.append('formId',     XPRISMA_FORM_ID);
+    if (captchaToken) fd.append('captchaV3', captchaToken);
+
+    // POST anônimo — credentials:omit impede envio de cookies de sessão
+    // cache:no-store garante que nenhum dado fique preso no cache do browser
+    const resp = await fetch(XPRISMA_ENDPOINT, {
+      method:      'POST',
+      body:        fd,
+      credentials: 'omit',
+      cache:       'no-store',
     });
 
     const status = resp.status;
