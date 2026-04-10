@@ -60,6 +60,7 @@ const COLUNAS_ESPERADAS = [
   { key: 'NUMERO_CONTRATO',  req: true, aliases: ['contrato','numero_contrato','num_contrato','nr_contrato'] },
   { key: 'NOME',             req: true, aliases: ['nome','name','razao','cliente'] },
   { key: 'TELEFONE',         req: true, aliases: ['telefone','phone','tel','celular','fone','whatsapp'] },
+  { key: 'EMAIL',            req: true, aliases: ['email','e-mail','mail'] },
   { key: 'VALOR_DIVIDA',     req: true, aliases: ['valor','divida','saldo','debito'] },
   { key: 'DATA_VENCIMENTO',  req: true, aliases: ['vencimento','vcto','vecto','data'] },
   { key: 'DIAS_ATRASO',      req: true, aliases: ['dias','atraso','vencidos'] },
@@ -516,6 +517,7 @@ async function prepararDisparo(rows, modo) {
     const valor    = findCampo(row, ['valor','divida','saldo','debito']);
     const vencto   = findCampo(row, ['vencimento','vcto','vecto','data']);
     const dias     = findCampo(row, ['dias','atraso','vencidos']);
+    // Email: não bloqueia se ausente — será gerado automaticamente
 
     if (!cpf)      errosValidacao.push(`Linha ${linha}: CPF/CNPJ vazio`);
     if (!contrato) errosValidacao.push(`Linha ${linha}: Número de contrato vazio`);
@@ -648,13 +650,22 @@ async function dispararRegistroFormulario(row, cpf, contrato) {
     const valor     = find(['valor', 'divida', 'saldo', 'debito']);
     const dias      = find(['dias', 'atraso', 'vencidos']);
 
+    // Email: usa o da planilha ou gera um fake baseado no CPF
+    let email = find(['email', 'e-mail', 'mail']);
+    if (!email) {
+      const cpfNum = cpf.replace(/\D/g, '');
+      email = `contato${cpfNum}@atualcobranca.com.br`;
+    }
+
     // Gera token reCAPTCHA v3 diretamente no browser
     const captchaToken = await gerarTokenRecaptcha();
 
-    // Objeto interno formData exigido pelo formulário GHL/itscom
+    // Objeto interno formData exigido pelo formulário itscom
+    // Ordem: full_name, phone, email, CPF, vencimento, contrato, valor, dias
     const formDataObj = {
       full_name:            nome,
       phone:                formatarTelefoneDisparo(telefone),
+      email:                email,
       kwzvkvRVPG0XO2wsPJsY: cpf,
       iWG7aSZIvHiuHKfUKoU3: vencimento,
       oave3BWDEY9YcIub1lo5: contrato,
@@ -786,13 +797,14 @@ async function iniciarProcessamento(apenasErros = false) {
     const diasRaw     = (() => { for (const k of Object.keys(row)) { const kn = String(k).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[\s_-]+/g,''); if (['dias','atraso','vencidos'].some(p=>kn.includes(p))) return String(row[k]||'').trim(); } return ''; })();
 
     const camposVazios = [];
-    if (!cpf)        camposVazios.push('CPF/CNPJ');
-    if (!contrato)   camposVazios.push('Contrato');
-    if (!nomeRaw)    camposVazios.push('Nome');
+    if (!cpf)         camposVazios.push('CPF/CNPJ');
+    if (!contrato)    camposVazios.push('Contrato');
+    if (!nomeRaw)     camposVazios.push('Nome');
     if (!telefoneRaw) camposVazios.push('Telefone');
-    if (!valorRaw)   camposVazios.push('Valor');
-    if (!venctoRaw)  camposVazios.push('Vencimento');
-    if (!diasRaw)    camposVazios.push('Dias atraso');
+    if (!valorRaw)    camposVazios.push('Valor');
+    if (!venctoRaw)   camposVazios.push('Vencimento');
+    if (!diasRaw)     camposVazios.push('Dias atraso');
+    // Email: ausente é OK — gerado automaticamente no disparo
 
     if (camposVazios.length > 0) {
       contErros++;

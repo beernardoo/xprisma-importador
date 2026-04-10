@@ -95,17 +95,19 @@
             <span class="col-sep">;</span>
             <span class="col-tag col-req" title="Obrigatório">NUMERO_CONTRATO</span>
             <span class="col-sep">;</span>
-            <span class="col-tag">NOME</span>
+            <span class="col-tag col-req" title="Obrigatório">NOME</span>
             <span class="col-sep">;</span>
-            <span class="col-tag">TELEFONE</span>
+            <span class="col-tag col-req" title="Obrigatório">TELEFONE</span>
             <span class="col-sep">;</span>
-            <span class="col-tag">VALOR_DIVIDA</span>
+            <span class="col-tag col-req" title="Obrigatório">EMAIL</span>
             <span class="col-sep">;</span>
-            <span class="col-tag">DATA_VENCIMENTO</span>
+            <span class="col-tag col-req" title="Obrigatório">VALOR_DIVIDA</span>
             <span class="col-sep">;</span>
-            <span class="col-tag">DIAS_ATRASO</span>
+            <span class="col-tag col-req" title="Obrigatório">DATA_VENCIMENTO</span>
+            <span class="col-sep">;</span>
+            <span class="col-tag col-req" title="Obrigatório">DIAS_ATRASO</span>
           </div>
-          <span class="layout-hint-obs">🔴 Obrigatórias &nbsp;⚪ Recomendadas</span>
+          <span class="layout-hint-obs">🔴 Obrigatórias &nbsp;⚫ Email gerado automaticamente se ausente</span>
         </div>
       </div>
 
@@ -214,9 +216,9 @@
         </div>
         <div class="direto-exemplo">
           <span class="exemplo-label">Exemplo:</span>
-          <code>CPF_CNPJ;NUMERO_CONTRATO;NOME;TELEFONE;VALOR_DIVIDA;DATA_VENCIMENTO;DIAS_ATRASO<br>12345678900;CONT001;João Silva;11999999999;1500.00;30/06/2025;30</code>
+          <code>CPF_CNPJ;NUMERO_CONTRATO;NOME;TELEFONE;EMAIL;VALOR_DIVIDA;DATA_VENCIMENTO;DIAS_ATRASO<br>12345678900;CONT001;João Silva;11999999999;joao@email.com;1500.00;30/06/2025;30</code>
         </div>
-        <textarea id="textarea-direto" class="direto-textarea" placeholder="CPF_CNPJ;NUMERO_CONTRATO;NOME;TELEFONE&#10;12345678900;CONT001;João Silva;11999999999"></textarea>
+        <textarea id="textarea-direto" class="direto-textarea" placeholder="CPF_CNPJ;NUMERO_CONTRATO;NOME;TELEFONE;EMAIL;VALOR_DIVIDA;DATA_VENCIMENTO;DIAS_ATRASO&#10;12345678900;CONT001;João Silva;11999999999;joao@email.com;1500.00;30/06/2025;30"></textarea>
         <div class="direto-acoes">
           <button class="btn btn-ghost" id="btn-limpar-direto">Limpar</button>
           <button class="btn btn-primary" id="btn-analisar-direto">Analisar dados →</button>
