@@ -98,19 +98,27 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 // ══════════════════════════════════════════════════════
 const IW=640, IH=390;
 const canvas=document.getElementById('c');
-const ctx=canvas.getContext('2d');
+const mainCtx=canvas.getContext('2d');
 const SW=document.getElementById('sw');
+
+// ── PIXEL ART: draw to offscreen at 1/PXSCALE, blit up with no smoothing ──
+// Every canvas "pixel" → PXSCALE×PXSCALE screen pixels = chunky pixel-art look
+const PXSCALE=3;
+const offCanvas=document.createElement('canvas');
+let ctx=offCanvas.getContext('2d');  // all draw functions target offCanvas
 
 let _pixiReady=false;
 function resize(){
   canvas.width=SW.clientWidth; canvas.height=SW.clientHeight-24;
+  offCanvas.width =Math.max(1,Math.floor(canvas.width /PXSCALE));
+  offCanvas.height=Math.max(1,Math.floor(canvas.height/PXSCALE));
   if(_pixiReady) _pixiResize();
 }
 resize(); window.addEventListener('resize',resize);
 
 function setTx(){
-  const sc=Math.min(canvas.width/IW, canvas.height/IH);
-  ctx.setTransform(sc,0,0,sc,(canvas.width-IW*sc)/2,(canvas.height-IH*sc)/2);
+  const sc=Math.min(offCanvas.width/IW, offCanvas.height/IH);
+  ctx.setTransform(sc,0,0,sc,(offCanvas.width-IW*sc)/2,(offCanvas.height-IH*sc)/2);
 }
 
 // Color utils
@@ -1535,7 +1543,7 @@ setInterval(()=>{tok+=Math.floor(Math.random()*110+30);document.getElementById('
 // dark pixels ≈ transparent in screen mode, bright neons = halo glow.
 // NEVER set _overlayEl.width/height directly (kills WebGL context).
 const _overlayEl = document.createElement('canvas');
-_overlayEl.style.cssText='position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;mix-blend-mode:screen;';
+_overlayEl.style.cssText='position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;mix-blend-mode:screen;opacity:0.65;';
 SW.appendChild(_overlayEl);
 
 const _pixiApp = new PIXI.Application({
@@ -1555,9 +1563,9 @@ const _sceneTx     = new PIXI.Texture(_sceneBt);
 const _glowSprite  = new PIXI.Sprite(_sceneTx);
 
 // Heavy blur = wide glow halo; ColorMatrix boosts saturation of the glow
-const _blurFilter = new PIXI.BlurFilter(16, 4, 1, 9);
+const _blurFilter = new PIXI.BlurFilter(5, 3, 1, 7);
 const _cmFilter   = new PIXI.ColorMatrixFilter();
-_cmFilter.saturate(0.6, false);
+_cmFilter.saturate(0.4, false);
 _glowSprite.filters = [_blurFilter, _cmFilter];
 _pixiApp.stage.addChild(_glowSprite);
 
@@ -1582,15 +1590,23 @@ _pixiReady = true;
 // ══════════════════════════════════════════════════════
 let tick=0,hudT=0;
 function loop(){
-  // ── Canvas 2D frame ──
-  ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,canvas.width,canvas.height);ctx.restore();
+  // ── Draw scene to offscreen canvas (1/PXSCALE resolution) ──
+  ctx.save(); ctx.setTransform(1,0,0,1,0,0);
+  ctx.clearRect(0,0,offCanvas.width,offCanvas.height); ctx.restore();
   setTx();
   drawRoom(tick);
   updateAgents();
   drawAgents(tick);
+
+  // ── Blit to display canvas: 3× upscale without smoothing = pixel art ──
+  mainCtx.save(); mainCtx.setTransform(1,0,0,1,0,0);
+  mainCtx.clearRect(0,0,canvas.width,canvas.height);
+  mainCtx.imageSmoothingEnabled=false;
+  mainCtx.drawImage(offCanvas,0,0,canvas.width,canvas.height);
+  mainCtx.restore();
+
   if(++hudT%30===0)updateHUD();
   tick++;
-  // PixiJS bloom é gerenciado pelo seu próprio ticker — sem chamada aqui
   requestAnimationFrame(loop);
 }
 initAgents();loop();updateHUD();
