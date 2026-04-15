@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <title>AI Agent World — Among Us Style</title>
+<script src="https://cdn.jsdelivr.net/npm/pixi.js@7.3.2/dist/pixi.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pixi-filters@5.5.0/dist/pixi-filters.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
 *{margin:0;padding:0;box-sizing:border-box}
@@ -99,7 +101,11 @@ const canvas=document.getElementById('c');
 const ctx=canvas.getContext('2d');
 const SW=document.getElementById('sw');
 
-function resize(){ canvas.width=SW.clientWidth; canvas.height=SW.clientHeight-24; }
+let _pixiReady=false;
+function resize(){
+  canvas.width=SW.clientWidth; canvas.height=SW.clientHeight-24;
+  if(_pixiReady) _pixiResize();
+}
 resize(); window.addEventListener('resize',resize);
 
 function setTx(){
@@ -1265,10 +1271,61 @@ let tok=284901;
 setInterval(()=>{tok+=Math.floor(Math.random()*110+30);document.getElementById('tok').textContent=tok.toLocaleString('pt-BR');},1100);
 
 // ══════════════════════════════════════════════════════
+//  PIXI.JS — BLOOM GLOW OVERLAY (screen blend mode)
+// ══════════════════════════════════════════════════════
+// Canvas stays visible (opacity 1). PixiJS overlay = transparent bg +
+// mix-blend-mode:screen. Only the blurred glow layer is rendered —
+// dark pixels ≈ transparent in screen mode, bright neons = halo glow.
+// NEVER set _overlayEl.width/height directly (kills WebGL context).
+const _overlayEl = document.createElement('canvas');
+_overlayEl.style.cssText='position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;mix-blend-mode:screen;';
+SW.appendChild(_overlayEl);
+
+const _pixiApp = new PIXI.Application({
+  view: _overlayEl,
+  width: canvas.width, height: canvas.height,
+  backgroundAlpha: 0,  // transparent — only glow is drawn
+  antialias: true,
+  resolution: 1,
+});
+
+// Canvas 2D stays fully visible beneath the glow overlay
+canvas.style.opacity = '1';
+
+// BaseTexture.from(canvas) — confirmed working in PixiJS 7
+const _sceneBt     = PIXI.BaseTexture.from(canvas);
+const _sceneTx     = new PIXI.Texture(_sceneBt);
+const _glowSprite  = new PIXI.Sprite(_sceneTx);
+
+// Heavy blur = wide glow halo; ColorMatrix boosts saturation of the glow
+const _blurFilter = new PIXI.BlurFilter(16, 4, 1, 9);
+const _cmFilter   = new PIXI.ColorMatrixFilter();
+_cmFilter.saturate(0.6, false);
+_glowSprite.filters = [_blurFilter, _cmFilter];
+_pixiApp.stage.addChild(_glowSprite);
+
+// PixiJS ticker: sync sprite size + re-upload canvas pixels every frame
+_pixiApp.ticker.add(()=>{
+  _glowSprite.width  = canvas.width;
+  _glowSprite.height = canvas.height;
+  _sceneBt.update();
+});
+
+function _pixiResize(){
+  // Only renderer.resize — NEVER touch _overlayEl.width/height (kills WebGL ctx)
+  _pixiApp.renderer.resize(canvas.width, canvas.height);
+  _glowSprite.width  = canvas.width;
+  _glowSprite.height = canvas.height;
+}
+_pixiResize();
+_pixiReady = true;
+
+// ══════════════════════════════════════════════════════
 //  LOOP
 // ══════════════════════════════════════════════════════
 let tick=0,hudT=0;
 function loop(){
+  // ── Canvas 2D frame ──
   ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,canvas.width,canvas.height);ctx.restore();
   setTx();
   drawRoom(tick);
@@ -1276,6 +1333,7 @@ function loop(){
   drawAgents(tick);
   if(++hudT%30===0)updateHUD();
   tick++;
+  // PixiJS bloom é gerenciado pelo seu próprio ticker — sem chamada aqui
   requestAnimationFrame(loop);
 }
 initAgents();loop();updateHUD();
