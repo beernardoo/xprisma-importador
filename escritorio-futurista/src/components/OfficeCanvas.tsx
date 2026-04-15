@@ -48,8 +48,12 @@ export default function OfficeCanvas() {
   return (
     <canvas
       ref={canvasRef}
-      className="block w-full h-full"
-      style={{ background: '#030710' }}
+      style={{
+        display: 'block',
+        width: '100%',
+        height: '100%',
+        background: '#030710',
+      }}
     />
   );
 }

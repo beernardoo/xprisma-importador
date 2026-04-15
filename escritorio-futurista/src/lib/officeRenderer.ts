@@ -20,7 +20,6 @@ export type AgentClickCb = (id: string, x: number, y: number) => void;
 
 const IW = 640;
 const IH = 390;
-const PXSCALE = 3;
 const WH = 65; // wall height
 
 // desk center x positions (6 desks)
@@ -34,45 +33,43 @@ const WP_CHAT   = [{ x: 230, y: 280 }, { x: 270, y: 295 }, { x: 200, y: 310 }];
 
 export class OfficeRenderer {
   private display: HTMLCanvasElement;
-  private off: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
-  private dCtx: CanvasRenderingContext2D;
   private tick = 0;
   private rafId = 0;
   private agents: RendererAgent[] = [];
   private onAgentClick: AgentClickCb = () => {};
   private hoveredId: string | null = null;
+  private _resizeBound: () => void;
 
   constructor(canvas: HTMLCanvasElement) {
     this.display = canvas;
-    this.dCtx = canvas.getContext('2d')!;
-    this.off = document.createElement('canvas');
-    this.ctx = this.off.getContext('2d')!;
+    this.ctx = canvas.getContext('2d')!;
+    this._resizeBound = this.resize.bind(this);
     this.resize();
-    window.addEventListener('resize', this.resize.bind(this));
+    window.addEventListener('resize', this._resizeBound);
     canvas.addEventListener('mousemove', this.onMouseMove.bind(this));
     canvas.addEventListener('click', this.onMouseClick.bind(this));
   }
 
-  setAgents(agents: RendererAgent[]) { this.agents = agents; }
+  setAgents(a: RendererAgent[]) { this.agents = a; }
   setOnAgentClick(cb: AgentClickCb) { this.onAgentClick = cb; }
 
   private resize() {
-    const parent = this.display.parentElement;
-    if (!parent) return;
-    this.display.width = parent.clientWidth;
-    this.display.height = parent.clientHeight;
-    this.off.width  = Math.max(1, Math.floor(this.display.width  / PXSCALE));
-    this.off.height = Math.max(1, Math.floor(this.display.height / PXSCALE));
+    const canvas = this.display;
+    const dpr = window.devicePixelRatio || 1;
+    // Use getBoundingClientRect for reliable CSS dimensions
+    const rect = canvas.getBoundingClientRect();
+    const w = rect.width  || canvas.offsetWidth  || window.innerWidth  - 275;
+    const h = rect.height || canvas.offsetHeight || window.innerHeight - 24;
+    canvas.width  = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
   }
 
   private setTx() {
-    const sc = Math.min(this.off.width / IW, this.off.height / IH);
-    this.ctx.setTransform(
-      sc, 0, 0, sc,
-      (this.off.width  - IW * sc) / 2,
-      (this.off.height - IH * sc) / 2
-    );
+    const W = this.display.width;
+    const H = this.display.height;
+    const sc = Math.min(W / IW, H / IH);
+    this.ctx.setTransform(sc, 0, 0, sc, (W - IW * sc) / 2, (H - IH * sc) / 2);
   }
 
   // ── colour helpers ───────────────────────────────────────────────────────
@@ -872,13 +869,13 @@ export class OfficeRenderer {
   //  MOUSE INTERACTION
   // ══════════════════════════════════════════════════════════════════════
   private screenToWorld(ex:number,ey:number):{wx:number,wy:number} {
-    const sc=Math.min(this.off.width/IW, this.off.height/IH);
-    const ox=(this.off.width-IW*sc)/2;
-    const oy=(this.off.height-IH*sc)/2;
-    // map from display pixels → offCanvas pixels → world coords
-    const dpx=ex*(this.off.width/this.display.width);
-    const dpy=ey*(this.off.height/this.display.height);
-    return { wx:(dpx-ox)/sc, wy:(dpy-oy)/sc };
+    const dpr = window.devicePixelRatio || 1;
+    const W = this.display.width;
+    const H = this.display.height;
+    const sc = Math.min(W / IW, H / IH);
+    const ox = (W - IW * sc) / 2;
+    const oy = (H - IH * sc) / 2;
+    return { wx: (ex * dpr - ox) / sc, wy: (ey * dpr - oy) / sc };
   }
 
   private agentAt(wx:number,wy:number): RendererAgent|null {
@@ -910,7 +907,7 @@ export class OfficeRenderer {
   private frame() {
     this.tick++;
     const ctx=this.ctx;
-    ctx.clearRect(0,0,this.off.width,this.off.height);
+    ctx.clearRect(0,0,this.display.width,this.display.height);
     this.setTx();
 
     // room background
@@ -964,12 +961,7 @@ export class OfficeRenderer {
     // vignette last
     this.drawVignette();
 
-    // blit to display (nearest-neighbour = pixel-art look)
-    this.dCtx.save();
-    this.dCtx.imageSmoothingEnabled=false;
-    this.dCtx.clearRect(0,0,this.display.width,this.display.height);
-    this.dCtx.drawImage(this.off,0,0,this.off.width,this.off.height,0,0,this.display.width,this.display.height);
-    this.dCtx.restore();
+    // (drawing is already on display canvas — nothing to blit)
 
     this.rafId=requestAnimationFrame(()=>this.frame());
   }
@@ -979,6 +971,6 @@ export class OfficeRenderer {
 
   destroy() {
     this.stop();
-    window.removeEventListener('resize',this.resize.bind(this));
+    window.removeEventListener('resize', this._resizeBound);
   }
 }

@@ -1,29 +1,25 @@
 'use client';
 
-import dynamic from 'next/dynamic';
+import { useEffect, useState } from 'react';
 import AgentPanel from '@/components/AgentPanel';
 import MetricsBar from '@/components/MetricsBar';
 import AgentDetailsDrawer from '@/components/AgentDetailsDrawer';
-
-// Canvas uses browser APIs — load client-only
-const OfficeCanvas = dynamic(() => import('@/components/OfficeCanvas'), { ssr: false });
+import OfficeCanvas from '@/components/OfficeCanvas';
 
 export default function Home() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   return (
     <div className="flex flex-col h-screen overflow-hidden">
-      {/* main row */}
       <div className="flex flex-1 overflow-hidden relative">
         {/* canvas area */}
         <div className="flex-1 relative overflow-hidden bg-[#030710]">
-          <OfficeCanvas />
+          {mounted && <OfficeCanvas />}
           <AgentDetailsDrawer />
         </div>
-
-        {/* right HUD */}
         <AgentPanel />
       </div>
-
-      {/* bottom metrics bar */}
       <MetricsBar />
     </div>
   );
