@@ -410,21 +410,35 @@ function drawRoom(tick){
   // Shelves
   drawShelf(128,14);drawShelf(340,14);
 
+  // Movie poster (AVATAR) on wall between windows
+  drawMoviePoster(94,3);
+
+  // FRIENDS TV (right area, wall-mounted on stand)
+  drawFriendsTV(388,134,tick);
+
+  // Armchair (right-center floor area)
+  drawArmchair(452,200);
+
+  // Server racks (two side by side, right wall)
+  drawServerRack(558,268,tick);
+  drawServerRack(596,268,tick);
+
   // Big plant
   drawBigPlant(618,272,tick);
-  // Lamp
+  // Floor lamp (right)
   drawLamp(606,352,tick);
+  // UV fluorescent lamp (left area)
+  drawUVLamp(52,358,tick);
   // Small plants
   drawSmallPlant(7,158,tick,0);drawSmallPlant(7,348,tick,1);
   // Cactus
   drawCactus(120,348,tick);
-  // Cat
+  // Sleeping cat (bottom left, on cushion)
   drawCat(58,355,tick);
+  // Orange sitting cat (center area, alert)
+  drawSittingCat(170,292,tick);
   // Coffee machine
   drawCoffeeMachine(300,372,tick);
-  // Server racks (two side by side, prominent right wall)
-  drawServerRack(558,268,tick);
-  drawServerRack(596,268,tick);
 
   // Vignette (softer for dark theme)
   const vig=ctx.createRadialGradient(W/2,H/2,80,W/2,H/2,W*0.75);
@@ -1148,6 +1162,249 @@ function drawServerRack(x,y,tick){
   ctx.fillText('SERVER',x+rw/2,y+8);
   ctx.fillStyle='rgba(0,245,255,0.35)';ctx.font='3px monospace';
   ctx.fillText('RACK',x+rw/2,y+12.5);
+}
+
+// ══════════════════════════════════════════════════════
+//  UV FLUORESCENT TUBE LAMP
+// ══════════════════════════════════════════════════════
+function drawUVLamp(x,y,tick){
+  const br=0.72+Math.sin(tick*0.05+1.2)*0.2;
+  // Floor pool glow
+  const fg=ctx.createRadialGradient(x,y,2,x,y,50);
+  fg.addColorStop(0,`rgba(190,0,255,${(br*0.28).toFixed(2)})`);
+  fg.addColorStop(1,'rgba(120,0,180,0)');
+  ctx.fillStyle=fg; ctx.beginPath(); ctx.ellipse(x,y,50,16,0,0,Math.PI*2); ctx.fill();
+  // Pole
+  const pg=ctx.createLinearGradient(x-2,0,x+2,0);
+  pg.addColorStop(0,'#100A1E'); pg.addColorStop(0.5,'#1C1434'); pg.addColorStop(1,'#100A1E');
+  ctx.fillStyle=pg; ctx.fillRect(x-2,y-96,4,89);
+  ctx.fillStyle='rgba(255,255,255,0.05)'; ctx.fillRect(x-0.5,y-95,0.8,88);
+  // Base
+  const bg=ctx.createLinearGradient(x-11,0,x+11,0);
+  bg.addColorStop(0,'#0E0A1A'); bg.addColorStop(0.5,'#1A1030'); bg.addColorStop(1,'#0E0A1A');
+  ctx.fillStyle=bg; ctx.beginPath(); rr(x-11,y-8,22,8,2); ctx.fill();
+  ctx.fillStyle='rgba(190,0,255,0.12)'; ctx.fillRect(x-9,y-8,18,1.5);
+  ctx.fillStyle='#0A0614'; ctx.beginPath(); rr(x-7,y,14,4,1); ctx.fill();
+  // Fixture top bracket
+  ctx.fillStyle='#0C0818'; ctx.beginPath(); rr(x-5,y-100,10,7,2); ctx.fill();
+  ctx.strokeStyle='rgba(160,0,255,0.3)'; ctx.lineWidth=0.5;
+  ctx.beginPath(); rr(x-5,y-100,10,7,2); ctx.stroke();
+  // Lateral ambient halo
+  ctx.globalAlpha=br*0.28;
+  const ug=ctx.createLinearGradient(x-44,y-98,x+44,y-98);
+  ug.addColorStop(0,'rgba(160,0,255,0)'); ug.addColorStop(0.5,`rgba(200,0,255,0.4)`); ug.addColorStop(1,'rgba(160,0,255,0)');
+  ctx.fillStyle=ug; ctx.fillRect(x-44,y-100,88,100);
+  ctx.globalAlpha=1;
+  // Tube outer glow
+  ctx.globalAlpha=br*0.35;
+  ctx.fillStyle=`rgba(210,60,255,0.5)`;
+  ctx.beginPath(); rr(x-3,y-95,6,90,3); ctx.fill();
+  ctx.globalAlpha=1;
+  // Tube glass (bright)
+  ctx.globalAlpha=br;
+  ctx.fillStyle=`rgba(230,160,255,0.65)`;
+  ctx.beginPath(); rr(x-1.8,y-94,3.6,88,1.8); ctx.fill();
+  ctx.fillStyle=`rgba(255,230,255,0.95)`;
+  ctx.beginPath(); rr(x-0.6,y-93,1.2,86,0.6); ctx.fill();
+  ctx.globalAlpha=1;
+  // Connector caps
+  ctx.fillStyle='#1A1430'; ctx.beginPath(); rr(x-3,y-96,6,3,0.5); ctx.fill();
+  ctx.beginPath(); rr(x-3,y-7,6,3,0.5); ctx.fill();
+}
+
+// ══════════════════════════════════════════════════════
+//  MOVIE POSTER (AVATAR)
+// ══════════════════════════════════════════════════════
+function drawMoviePoster(x,y){
+  // Outer frame shadow
+  ctx.fillStyle='rgba(0,0,0,0.45)'; ctx.beginPath(); rr(x+1,y+1,30,44,1); ctx.fill();
+  ctx.fillStyle='#100810'; ctx.beginPath(); rr(x,y,30,44,1); ctx.fill();
+  ctx.strokeStyle='rgba(80,0,200,0.65)'; ctx.lineWidth=0.8; ctx.strokeRect(x,y,30,44);
+  // BG gradient
+  const bg=ctx.createLinearGradient(x,y+1,x,y+43);
+  bg.addColorStop(0,'#010814'); bg.addColorStop(0.35,'#031830'); bg.addColorStop(0.7,'#041C44'); bg.addColorStop(1,'#020C1C');
+  ctx.fillStyle=bg; ctx.fillRect(x+1,y+1,28,42);
+  // Blue atmospheric haze
+  const ah=ctx.createRadialGradient(x+15,y+22,2,x+15,y+22,18);
+  ah.addColorStop(0,'rgba(0,100,220,0.38)'); ah.addColorStop(0.6,'rgba(0,60,160,0.15)'); ah.addColorStop(1,'rgba(0,0,80,0)');
+  ctx.fillStyle=ah; ctx.fillRect(x+1,y+1,28,42);
+  // Bioluminescent particles
+  ctx.fillStyle='rgba(100,200,255,0.75)';
+  [[x+6,y+13],[x+13,y+8],[x+21,y+15],[x+8,y+23],[x+19,y+19],[x+11,y+17],[x+24,y+10],[x+16,y+26]].forEach(([px,py])=>{
+    ctx.beginPath(); ctx.arc(px,py,0.6,0,Math.PI*2); ctx.fill();
+  });
+  ctx.fillStyle='rgba(180,100,255,0.5)';
+  [[x+4,y+19],[x+18,y+24],[x+25,y+17],[x+10,y+28]].forEach(([px,py])=>{
+    ctx.beginPath(); ctx.arc(px,py,0.5,0,Math.PI*2); ctx.fill();
+  });
+  // Forest/tree silhouette (Avatar jungle)
+  ctx.fillStyle='rgba(0,40,100,0.78)';
+  [[x+1,y+35,5],[x+5,y+31,7],[x+10,y+34,5],[x+14,y+29,8],[x+19,y+33,5],[x+23,y+30,7],[x+27,y+35,4]].forEach(([tx,ty,th])=>{
+    ctx.beginPath(); ctx.moveTo(tx,ty+th); ctx.lineTo(tx+2,ty); ctx.lineTo(tx+4,ty+th); ctx.closePath(); ctx.fill();
+  });
+  ctx.fillStyle='rgba(0,60,130,0.6)';
+  [[x+2,y+38,4],[x+7,y+34,5],[x+12,y+36,4],[x+17,y+32,6],[x+22,y+35,4],[x+26,y+33,5]].forEach(([tx,ty,th])=>{
+    ctx.beginPath(); ctx.moveTo(tx,ty+th); ctx.lineTo(tx+1.5,ty); ctx.lineTo(tx+3,ty+th); ctx.closePath(); ctx.fill();
+  });
+  // Title
+  ctx.fillStyle='rgba(0,215,255,0.95)'; ctx.font='bold 5.5px monospace'; ctx.textAlign='center';
+  ctx.fillText('AVATAR',x+15,y+31);
+  ctx.fillStyle='rgba(0,180,255,0.22)'; ctx.font='bold 5.5px monospace';
+  ctx.fillText('AVATAR',x+15,y+31);
+  ctx.fillStyle='rgba(0,150,200,0.65)'; ctx.font='2.3px monospace';
+  ctx.fillText('THE WAY OF WATER',x+15,y+35.5);
+  ctx.fillStyle='rgba(160,180,220,0.45)'; ctx.font='2px monospace';
+  ctx.fillText("JAMES CAMERON'S",x+15,y+5);
+  // Shine
+  ctx.fillStyle='rgba(255,255,255,0.03)';
+  ctx.beginPath(); ctx.moveTo(x+1,y+1); ctx.lineTo(x+14,y+1); ctx.lineTo(x+1,y+22); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle='rgba(0,140,255,0.3)'; ctx.lineWidth=0.4; ctx.strokeRect(x+1,y+1,28,42);
+}
+
+// ══════════════════════════════════════════════════════
+//  FRIENDS TV
+// ══════════════════════════════════════════════════════
+function drawFriendsTV(x,y,tick){
+  const fl=0.88+Math.sin(tick*0.055)*0.09;
+  // Stand
+  ctx.fillStyle='#0E1620'; ctx.beginPath(); rr(x+8,y+20,8,4,1); ctx.fill();
+  ctx.beginPath(); rr(x+6,y+24,10,3,1); ctx.fill();
+  // Bezel
+  ctx.fillStyle='#070C16'; ctx.beginPath(); rr(x-2,y-2,28,24,2); ctx.fill();
+  ctx.strokeStyle='rgba(0,180,255,0.18)'; ctx.lineWidth=0.5; ctx.strokeRect(x-2,y-2,28,24);
+  ctx.fillStyle=tick%70<48?'#00FF88':'#003311';
+  ctx.beginPath(); ctx.arc(x+23,y+19,0.9,0,Math.PI*2); ctx.fill();
+  // Screen
+  ctx.globalAlpha=fl;
+  ctx.fillStyle='#0A0618'; ctx.fillRect(x,y,24,20);
+  const flets=['F','R','I','E','N','D','S'];
+  const fcols=['#FF3333','#FF9900','#FFEE00','#44FF44','#4499FF','#AA44FF','#FF4499'];
+  ctx.font='bold 4.5px monospace'; ctx.textAlign='left';
+  flets.forEach((l,i)=>{ ctx.fillStyle=fcols[i]; ctx.fillText(l,x+1+i*3.3,y+12); });
+  // Couch icon
+  ctx.fillStyle='rgba(255,175,80,0.55)'; ctx.beginPath(); rr(x+3,y+14,18,4,1); ctx.fill();
+  ctx.fillStyle='rgba(255,220,130,0.3)'; ctx.fillRect(x+3,y+14,18,1.5);
+  ctx.globalAlpha=1;
+  // Screen glow
+  ctx.fillStyle='rgba(200,160,255,0.07)';
+  ctx.beginPath(); ctx.ellipse(x+12,y+10,16,13,0,0,Math.PI*2); ctx.fill();
+}
+
+// ══════════════════════════════════════════════════════
+//  GOLDEN ARMCHAIR
+// ══════════════════════════════════════════════════════
+function drawArmchair(x,y){
+  // Shadow
+  ctx.fillStyle='rgba(0,0,0,0.2)';
+  ctx.beginPath(); ctx.ellipse(x+22,y+52,25,5,0,0,Math.PI*2); ctx.fill();
+  // Legs (wooden)
+  ctx.fillStyle='#3E2608'; ctx.fillRect(x+5,y+44,5,10); ctx.fillRect(x+34,y+44,5,10);
+  ctx.fillStyle='#5E3A12'; ctx.fillRect(x+5,y+44,5,2); ctx.fillRect(x+34,y+44,5,2);
+  // Back rest
+  const brv=ctx.createLinearGradient(0,y,0,y+40);
+  brv.addColorStop(0,'#D4A848'); brv.addColorStop(0.5,'#B08030'); brv.addColorStop(1,'#886020');
+  ctx.fillStyle=brv; ctx.beginPath(); rr(x,y,44,40,3); ctx.fill();
+  ctx.fillStyle='rgba(255,235,160,0.18)'; ctx.fillRect(x+2,y+2,40,10);
+  // Tuft buttons + diamond stitch
+  ctx.fillStyle='rgba(80,52,8,0.45)';
+  [[x+12,y+12],[x+32,y+12],[x+12,y+27],[x+32,y+27]].forEach(([bx,by])=>{
+    ctx.beginPath(); ctx.arc(bx,by,2,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='rgba(70,45,8,0.3)'; ctx.lineWidth=0.5;
+    ctx.beginPath();
+    ctx.moveTo(bx,by); ctx.lineTo(bx-7,by-7);
+    ctx.moveTo(bx,by); ctx.lineTo(bx+7,by-7);
+    ctx.moveTo(bx,by); ctx.lineTo(bx-7,by+7);
+    ctx.moveTo(bx,by); ctx.lineTo(bx+7,by+7);
+    ctx.stroke();
+  });
+  ctx.strokeStyle='rgba(80,52,8,0.3)'; ctx.lineWidth=0.7;
+  ctx.beginPath(); ctx.moveTo(x+22,y+4); ctx.lineTo(x+22,y+38); ctx.stroke();
+  // Seat cushion
+  const scg=ctx.createLinearGradient(0,y+32,0,y+47);
+  scg.addColorStop(0,'#DEBA52'); scg.addColorStop(0.5,'#C09A3A'); scg.addColorStop(1,'#8A6C24');
+  ctx.fillStyle=scg; ctx.beginPath(); rr(x-3,y+32,50,16,3); ctx.fill();
+  ctx.fillStyle='rgba(255,235,150,0.2)'; ctx.fillRect(x-1,y+33,46,5);
+  ctx.strokeStyle='rgba(90,60,12,0.32)'; ctx.lineWidth=0.7;
+  ctx.beginPath(); ctx.moveTo(x+22,y+34); ctx.lineTo(x+22,y+47); ctx.stroke();
+  // Armrests
+  const arg=ctx.createLinearGradient(0,y+22,0,y+36);
+  arg.addColorStop(0,'#A27828'); arg.addColorStop(1,'#6A4E18');
+  ctx.fillStyle=arg;
+  ctx.beginPath(); rr(x-7,y+20,12,14,3); ctx.fill();
+  ctx.beginPath(); rr(x+39,y+20,12,14,3); ctx.fill();
+  ctx.fillStyle='rgba(255,230,140,0.14)';
+  ctx.fillRect(x-5,y+20,8,3); ctx.fillRect(x+41,y+20,8,3);
+  // Neon accent glow
+  ctx.strokeStyle='rgba(190,145,60,0.22)'; ctx.lineWidth=0.6;
+  ctx.strokeRect(x-3,y,50,47);
+}
+
+// ══════════════════════════════════════════════════════
+//  ORANGE TABBY SITTING CAT (ALERT)
+// ══════════════════════════════════════════════════════
+function drawSittingCat(x,y,tick){
+  const sw=Math.sin(tick*0.038)*1.4;
+  ctx.save(); ctx.translate(x,y);
+  // Shadow
+  ctx.fillStyle='rgba(0,0,0,0.18)';
+  ctx.beginPath(); ctx.ellipse(0,18,13,3,0,0,Math.PI*2); ctx.fill();
+  // Tail
+  ctx.strokeStyle='#B86E10'; ctx.lineWidth=3.5;
+  ctx.beginPath(); ctx.moveTo(9,14); ctx.bezierCurveTo(24,8,28,-2,22,-6); ctx.stroke();
+  ctx.strokeStyle='#E09030'; ctx.lineWidth=1.8;
+  ctx.beginPath(); ctx.moveTo(9,13); ctx.bezierCurveTo(23,7,27,-3,21,-7); ctx.stroke();
+  ctx.fillStyle='#F0B040'; ctx.beginPath(); ctx.arc(21,-7,3,0,Math.PI*2); ctx.fill();
+  // Body
+  const bg=ctx.createRadialGradient(-2,5,2,0,7,14);
+  bg.addColorStop(0,'#E8850A'); bg.addColorStop(0.65,'#C86A08'); bg.addColorStop(1,'#9A5206');
+  ctx.fillStyle=bg; ctx.beginPath(); ctx.ellipse(0,8,11,12,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#F4AA40'; ctx.beginPath(); ctx.ellipse(2,10,5,7,0.2,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='rgba(130,55,5,0.42)';
+  [[-8,3,2,8],[-4,2,1.5,9],[5,3,1.5,8]].forEach(([sx2,sy2,sw2,sh2])=>ctx.fillRect(sx2,sy2,sw2,sh2));
+  // Paws
+  ctx.fillStyle='#C87018';
+  ctx.beginPath(); ctx.ellipse(-5,18,4,2.5,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(5,18,4,2.5,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#E08828';
+  ctx.beginPath(); ctx.ellipse(-5,17.5,3,2,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(5,17.5,3,2,0,0,Math.PI*2); ctx.fill();
+  // Head
+  const hx=sw*0.35;
+  const hg=ctx.createRadialGradient(hx-1,-8,2,hx,-6,10);
+  hg.addColorStop(0,'#EA8410'); hg.addColorStop(1,'#B06008');
+  ctx.fillStyle=hg; ctx.beginPath(); ctx.arc(hx,-6,10,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='rgba(130,55,5,0.38)';
+  [[-3+hx,-16,1.5,5],[0.5+hx,-17,1.5,5],[4+hx,-16,1.5,5]].forEach(([sx2,sy2,sw2,sh2])=>ctx.fillRect(sx2,sy2,sw2,sh2));
+  // Ears
+  ctx.fillStyle='#C87010';
+  ctx.beginPath(); ctx.moveTo(hx-8,-13); ctx.lineTo(hx-13,-22); ctx.lineTo(hx-4,-15); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(hx+8,-13); ctx.lineTo(hx+13,-22); ctx.lineTo(hx+4,-15); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='rgba(255,150,150,0.4)';
+  ctx.beginPath(); ctx.moveTo(hx-7.5,-13); ctx.lineTo(hx-10,-19); ctx.lineTo(hx-5,-15.5); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(hx+7.5,-13); ctx.lineTo(hx+10,-19); ctx.lineTo(hx+5,-15.5); ctx.closePath(); ctx.fill();
+  // Eyes (open golden)
+  ctx.fillStyle='#FFCC20';
+  ctx.beginPath(); ctx.ellipse(hx-3.5,-8,2.5,2.2,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(hx+3.5,-8,2.5,2.2,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#140800';
+  ctx.beginPath(); ctx.ellipse(hx-3.5,-8,1.2,1.9,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(hx+3.5,-8,1.2,1.9,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,0.7)';
+  ctx.beginPath(); ctx.arc(hx-4,-8.6,0.7,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(hx+3,-8.6,0.7,0,Math.PI*2); ctx.fill();
+  // Nose + mouth
+  ctx.fillStyle='#FF7788'; ctx.beginPath(); ctx.arc(hx,-4.5,1.2,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='rgba(0,0,0,0.5)'; ctx.lineWidth=0.4;
+  ctx.beginPath(); ctx.moveTo(hx,-3.5); ctx.lineTo(hx-1.5,-2.5); ctx.moveTo(hx,-3.5); ctx.lineTo(hx+1.5,-2.5); ctx.stroke();
+  // Whiskers
+  ctx.strokeStyle='rgba(255,255,255,0.55)'; ctx.lineWidth=0.4;
+  [[-13,-5,-2,-4.5],[-12,-3.5,-2,-3.8]].forEach(([x1,y1,x2,y2])=>{
+    ctx.beginPath(); ctx.moveTo(x1+hx,y1); ctx.lineTo(x2+hx,y2); ctx.stroke();
+  });
+  [[13,-5,2,-4.5],[12,-3.5,2,-3.8]].forEach(([x1,y1,x2,y2])=>{
+    ctx.beginPath(); ctx.moveTo(x1+hx,y1); ctx.lineTo(x2+hx,y2); ctx.stroke();
+  });
+  ctx.restore();
 }
 
 // ══════════════════════════════════════════════════════
