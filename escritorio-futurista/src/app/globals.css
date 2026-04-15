@@ -1,0 +1,47 @@
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --cy: #00f5ff;
+  --gn: #00ff88;
+  --or: #ff6b00;
+  --bg: #04080f;
+  --bd: #0d2847;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  font-family: 'Share Tech Mono', monospace;
+  color: #8ab4d4;
+}
+
+/* CRT scanline overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    rgba(0, 245, 255, 0.008) 3px,
+    rgba(0, 245, 255, 0.008) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+.font-orbitron {
+  font-family: 'Orbitron', sans-serif;
+}
