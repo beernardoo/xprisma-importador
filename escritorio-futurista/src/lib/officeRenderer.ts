@@ -68,7 +68,7 @@ export class OfficeRenderer {
   private setTx() {
     const W = this.display.width;
     const H = this.display.height;
-    const sc = Math.min(W / IW, H / IH);
+    const sc = Math.min(W / IW, H / IH) * 0.85;
     this.ctx.setTransform(sc, 0, 0, sc, (W - IW * sc) / 2, (H - IH * sc) / 2);
   }
 
@@ -113,7 +113,7 @@ export class OfficeRenderer {
     name: string, hovered: boolean
   ) {
     const ctx = this.ctx;
-    const R = 9;
+    const R = 7;
     const dark  = this.dk(bc, 58);
     const shade = this.dk(bc, 28);
     const walking = state.startsWith('walking');
@@ -580,21 +580,81 @@ export class OfficeRenderer {
 
   private drawMoviePoster(x:number,y:number) {
     const ctx=this.ctx;
-    // AVATAR poster
+
+    // find most active agent (Trabalhando > Executando tarefa > any)
+    const priority = ['Trabalhando','Executando tarefa','Analisando dados','Em reunião','Em descanso','Pausado'];
+    const star = this.agents.slice().sort((a,b)=>priority.indexOf(a.status)-priority.indexOf(b.status))[0];
+
+    // poster background
     ctx.fillStyle='#050C18'; ctx.beginPath(); this.rr(x,y,36,55,1); ctx.fill();
     const pg=ctx.createLinearGradient(x,y,x,y+55);
     pg.addColorStop(0,'#0A1A2E'); pg.addColorStop(0.4,'#0D2040'); pg.addColorStop(1,'#061018');
     ctx.fillStyle=pg; ctx.beginPath(); this.rr(x+1,y+1,34,53,0.8); ctx.fill();
-    // avatar silhouette
-    ctx.fillStyle='rgba(0,120,180,0.6)';
-    ctx.beginPath(); ctx.ellipse(x+18,y+20,7,9,0,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle='rgba(0,160,220,0.5)';
-    ctx.beginPath(); ctx.moveTo(x+10,y+36); ctx.bezierCurveTo(x+10,y+26,x+26,y+26,x+26,y+36); ctx.lineTo(x+26,y+52); ctx.lineTo(x+10,y+52); ctx.closePath(); ctx.fill();
-    // glow
-    ctx.fillStyle='rgba(0,200,255,0.08)'; ctx.beginPath(); ctx.ellipse(x+18,y+28,14,20,0,0,Math.PI*2); ctx.fill();
-    // title text
-    ctx.fillStyle='rgba(0,220,255,0.9)'; ctx.font='bold 5px "Share Tech Mono"'; ctx.textAlign='center';
-    ctx.fillText('AVATAR',x+18,y+48);
+
+    // clip everything to poster bounds
+    ctx.save();
+    ctx.beginPath(); ctx.rect(x+1,y+1,34,53); ctx.clip();
+
+    if (!star) {
+      ctx.fillStyle='rgba(0,220,255,0.9)'; ctx.font='bold 5px "Share Tech Mono"'; ctx.textAlign='center';
+      ctx.fillText('AVATAR',x+18,y+30);
+      ctx.restore();
+      ctx.strokeStyle='rgba(0,200,255,0.4)'; ctx.lineWidth=0.7; ctx.strokeRect(x,y,36,55);
+      return;
+    }
+
+    // glow halo behind agent
+    const glowG = ctx.createRadialGradient(x+18,y+30,0,x+18,y+30,14);
+    glowG.addColorStop(0,star.color+'55'); glowG.addColorStop(1,'transparent');
+    ctx.fillStyle=glowG; ctx.fillRect(x+1,y+8,34,38);
+
+    // mini crewmate — R=6 fits neatly inside 36×55 poster
+    // layout: name@y+52, body bottom@y+46, head top@y+18, label@y+16
+    ctx.save();
+    ctx.translate(x+18, y+44);
+    const R=6;
+    const dark=this.dk(star.color,58);
+    // body outline
+    ctx.save(); ctx.scale(1.08,1.06);
+    this.crewBody(R); ctx.fillStyle='#111'; ctx.fill();
+    ctx.restore();
+    // body fill
+    this.crewBody(R); ctx.fillStyle=star.color; ctx.fill();
+    // visor
+    ctx.save(); ctx.translate(-0.15*R,-3.6*R);
+    ctx.beginPath(); ctx.ellipse(0,0,R*0.75,R*0.52,0,0,Math.PI*2);
+    ctx.fillStyle='#0a0a18'; ctx.fill();
+    ctx.fillStyle=star.visorColor;
+    ctx.beginPath(); ctx.ellipse(-R*0.08,-R*0.04,R*0.56,R*0.38,0,0,Math.PI*2); ctx.fill();
+    const vg=ctx.createLinearGradient(-R*0.4,-R*0.35,R*0.3,R*0.25);
+    vg.addColorStop(0,'rgba(255,255,255,0.55)'); vg.addColorStop(1,'transparent');
+    ctx.fillStyle=vg;
+    ctx.beginPath(); ctx.ellipse(-R*0.08,-R*0.04,R*0.56,R*0.38,0,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+    // backpack
+    ctx.fillStyle='#111'; ctx.beginPath(); ctx.ellipse(R*1.38,-R*2.1,R*0.38,R*0.62,0.18,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=dark; ctx.beginPath(); ctx.ellipse(R*1.32,-R*2.1,R*0.28,R*0.5,0.18,0,Math.PI*2); ctx.fill();
+    // legs
+    const lx1=-R*0.45, lx2=R*0.45, ly=-R*0.5;
+    [lx1,lx2].forEach(lx=>{
+      ctx.fillStyle='#111'; ctx.beginPath(); ctx.ellipse(lx,ly,R*0.42*1.18,R*0.68*1.18,0,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle=dark; ctx.beginPath(); ctx.ellipse(lx,ly,R*0.42,R*0.68,0,0,Math.PI*2); ctx.fill();
+    });
+    ctx.restore();
+
+
+    // "TOP AGENT" label — drawn AFTER crewmate, 2px above head top
+    // head top = translate_y - R*4.75 = (y+44) - 28.5 = y+15.5  → label at y+14
+    ctx.fillStyle='rgba(255,215,0,0.95)'; ctx.font='bold 3.5px "Share Tech Mono"'; ctx.textAlign='center';
+    ctx.shadowColor='#FFD700'; ctx.shadowBlur=4;
+    ctx.fillText('★ TOP AGENT', x+18, y+14);
+    ctx.shadowBlur=0;
+    // agent name + emoji at very bottom
+    ctx.fillStyle='rgba(0,220,255,0.95)'; ctx.font='bold 4px "Share Tech Mono"'; ctx.textAlign='center';
+    ctx.fillText(star.emoji+' '+star.name, x+18, y+52);
+
+    // end clip
+    ctx.restore();
     ctx.strokeStyle='rgba(0,200,255,0.4)'; ctx.lineWidth=0.7; ctx.strokeRect(x,y,36,55);
   }
 
@@ -672,7 +732,7 @@ export class OfficeRenderer {
     // back leaves (darker)
     leafDefs.slice(0,4).forEach(([a,l,c,side,i])=>{
       ctx.save();
-      ctx.translate(x+sw*0.18*side,y-12+sw*0.1*(i%2?1:-1));
+      ctx.translate(x+sw*0.18*side,y-90+sw*0.1*(i%2?1:-1));
       ctx.rotate(a+sw*0.03*(i%2?1:-1));
       ctx.globalAlpha=0.7;
       const lg=ctx.createLinearGradient(0,0,l,0);
@@ -686,7 +746,7 @@ export class OfficeRenderer {
     // front leaves
     leafDefs.slice(4).forEach(([a,l,c,side,i])=>{
       ctx.save();
-      ctx.translate(x+sw*0.22*side,y-10+sw*0.14*(i%2?1:-1));
+      ctx.translate(x+sw*0.22*side,y-88+sw*0.14*(i%2?1:-1));
       ctx.rotate(a+sw*0.04*(i%2?1:-1));
       const lg=ctx.createLinearGradient(0,0,l,0);
       lg.addColorStop(0,c); lg.addColorStop(0.5,this.lk(c,18)); lg.addColorStop(1,this.dk(c,8));
@@ -707,7 +767,7 @@ export class OfficeRenderer {
     });
     // top new unfurling leaf
     ctx.save();
-    ctx.translate(x+sw*0.08,y-14+sw*0.06);
+    ctx.translate(x+sw*0.08,y-96+sw*0.06);
     ctx.rotate(-0.15+sw*0.04);
     ctx.fillStyle='#2EBB24';
     ctx.beginPath(); ctx.moveTo(0,0); ctx.bezierCurveTo(-2,-4,1,-9,0,-11); ctx.bezierCurveTo(1,-9,3,-4,0,0); ctx.closePath(); ctx.fill();
@@ -1135,50 +1195,33 @@ export class OfficeRenderer {
     ctx.fillStyle = 'rgba(100,40,160,0.06)';
     ctx.fillRect(PX, WH+10, IW-PX, IH-WH-10);
 
-    // Doorway arch top (decorative)
-    const archY = 190;
-    ctx.strokeStyle = 'rgba(0,200,255,0.5)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(PX, archY);
-    ctx.bezierCurveTo(PX-4, archY-20, PX+4, archY-20, PX, archY-28);
-    ctx.stroke();
-
-    // Glass wall segment (WH+14 to archY)
-    const gAlpha = 0.05 + Math.sin(tick*0.025)*0.015;
+    // Pulsing glass fill
+    const gAlpha = 0.04 + Math.sin(tick*0.025)*0.012;
     ctx.fillStyle = `rgba(0,160,220,${gAlpha.toFixed(3)})`;
-    ctx.fillRect(PX-3, WH+14, 6, archY - WH - 14);
+    ctx.fillRect(PX-3, WH+14, 6, IH - WH - 14);
 
     // Horizontal glass panel dividers
     ctx.strokeStyle = 'rgba(0,200,255,0.18)';
     ctx.lineWidth = 0.5;
-    for (let hy = WH+35; hy < archY-10; hy += 35) {
+    for (let hy = WH+30; hy < IH-10; hy += 40) {
       ctx.beginPath(); ctx.moveTo(PX-3, hy); ctx.lineTo(PX+3, hy); ctx.stroke();
     }
 
-    // Main vertical line (full height)
+    // Main vertical neon line (full height, no gap)
     const glow = 0.04 + Math.sin(tick*0.03)*0.02;
-    ctx.strokeStyle = `rgba(0,220,255,${(glow+0.3).toFixed(3)})`;
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = `rgba(0,220,255,${(glow+0.35).toFixed(3)})`;
+    ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.moveTo(PX, WH+14); ctx.lineTo(PX, IH); ctx.stroke();
 
     // Glow halo
     const hg = ctx.createLinearGradient(PX-18, 0, PX+18, 0);
     hg.addColorStop(0, 'rgba(0,180,255,0)');
-    hg.addColorStop(0.5, `rgba(0,180,255,${(glow*0.7).toFixed(3)})`);
+    hg.addColorStop(0.5, `rgba(0,180,255,${(glow*0.8).toFixed(3)})`);
     hg.addColorStop(1, 'rgba(0,180,255,0)');
     ctx.fillStyle = hg;
     ctx.fillRect(PX-18, WH+14, 36, IH-WH-14);
 
-    // Door frame left post
-    ctx.fillStyle = 'rgba(10,20,40,0.95)';
-    ctx.fillRect(PX-3, archY, 6, IH-archY);
-
-    // Floor door sill glow
-    ctx.fillStyle = 'rgba(0,200,255,0.12)';
-    ctx.fillRect(PX-3, IH-6, 6, 6);
-
-    // BREAK ROOM label in wall strip
+    // BREAK ROOM label above break room
     ctx.fillStyle = 'rgba(0,220,255,0.6)';
     ctx.font = 'bold 5px "Share Tech Mono"';
     ctx.textAlign = 'center';

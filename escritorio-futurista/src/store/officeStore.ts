@@ -117,8 +117,89 @@ export function startSimulation() {
     if (Math.random() < 0.15) incrementCompleted();
   }, 4500);
 
+  // Break room waypoints (x, y, arrivalState)
+  const BREAK_SPOTS: [number,number,string][] = [
+    [480, 210, 'on_sofa'],
+    [555, 215, 'on_sofa'],
+    [470, 180, 'chatting'],
+    [510, 290, 'chatting'],
+    [525, 255, 'idle'],
+    [498, 320, 'at_coffee'],
+    [590, 290, 'idle'],
+    [575, 190, 'chatting'],
+  ];
+
+  // Work area waypoints (x, y, arrivalState)
+  const WORK_SPOTS: [number,number,string][] = [
+    [150, 155, 'sitting'],  // desk 0
+    [228, 155, 'sitting'],  // desk 1
+    [306, 155, 'sitting'],  // desk 2
+    [384, 155, 'sitting'],  // desk 3
+    [26,  240, 'at_coffee'],
+    [58,  340, 'idle'],
+    [175, 290, 'at_coffee'],
+    [80,  200, 'idle'],
+    [200, 280, 'chatting'],
+    [100, 310, 'chatting'],
+  ];
+
+  const BREAK_ROOM_IDS = new Set(['wink', 'dino', 'aranha']);
+  const WALK_SPEED = 0.9;
+
+  const moveInterval = setInterval(() => {
+    const store = useOfficeStore.getState();
+    const agents = store.agents;
+
+    agents.forEach(agent => {
+      const isBreak = BREAK_ROOM_IDS.has(agent.id);
+      const spots = isBreak ? BREAK_SPOTS : WORK_SPOTS;
+
+      if (agent.state.startsWith('walking')) {
+        // Move toward target
+        const dx = agent.targetX - agent.x;
+        const dy = agent.targetY - agent.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < 2) {
+          // Arrived — switch to arrival state, set timer
+          store.updateAgent(agent.id, {
+            x: agent.targetX,
+            y: agent.targetY,
+            state: agent.state.replace('walking_to_', '') === 'desk' ? 'sitting'
+                  : agent.state.replace('walking_', ''),
+            walkFrame: 0,
+            stateTimer: 180 + Math.floor(Math.random() * 300),
+          });
+        } else {
+          // Still walking
+          store.updateAgent(agent.id, {
+            x: agent.x + (dx / dist) * WALK_SPEED,
+            y: agent.y + (dy / dist) * WALK_SPEED,
+            walkFrame: (agent.walkFrame + 1) % 4,
+          });
+        }
+      } else {
+        // Idle — count down timer
+        const newTimer = agent.stateTimer - 1;
+        if (newTimer <= 0) {
+          // Pick random new spot
+          const [tx, ty, _] = spots[Math.floor(Math.random() * spots.length)];
+          store.updateAgent(agent.id, {
+            targetX: tx,
+            targetY: ty,
+            state: 'walking',
+            stateTimer: 0,
+          });
+        } else {
+          store.updateAgent(agent.id, { stateTimer: newTimer });
+        }
+      }
+    });
+  }, 50);
+
   return () => {
     clearInterval(tokenInterval);
     clearInterval(statusInterval);
+    clearInterval(moveInterval);
   };
 }
