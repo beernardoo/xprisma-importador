@@ -18,6 +18,7 @@ interface OfficeStore {
   setSelectedAgent: (id: string | null) => void;
   updateAgent: (id: string, patch: Partial<Agent>) => void;
   updateAgentStatus: (id: string, status: AgentStatus, task: string) => void;
+  updateAgentProfile: (id: string, name: string, role: string, emoji: string, task: string) => void;
   addLog: (entry: Omit<LogEntry, 'id' | 'time'>) => void;
   tickTokens: () => void;
   incrementCompleted: () => void;
@@ -43,6 +44,13 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
   updateAgentStatus: (id, status, task) =>
     set((s) => ({
       agents: s.agents.map((a) => (a.id === id ? { ...a, status, task } : a)),
+    })),
+
+  updateAgentProfile: (id, name, role, emoji, task) =>
+    set((s) => ({
+      agents: s.agents.map((a) =>
+        a.id === id ? { ...a, name, role, emoji, task } : a
+      ),
     })),
 
   addLog: (entry) => {

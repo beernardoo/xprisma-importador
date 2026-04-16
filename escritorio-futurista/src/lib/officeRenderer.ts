@@ -22,8 +22,8 @@ const IW = 640;
 const IH = 390;
 const WH = 65; // wall height
 
-// desk center x positions (6 desks)
-const DESK_XS = [162, 244, 326, 408, 490, 574];
+// desk center x positions (4 desks)
+const DESK_XS = [150, 228, 306, 384];
 const DESK_Y = 155;
 
 // waypoints
@@ -1126,6 +1126,66 @@ export class OfficeRenderer {
     ctx.fillRect(x+16,y+5,6,1); ctx.fillRect(x+16,y+7,4,1);
   }
 
+  private drawPartitionWall() {
+    const ctx = this.ctx;
+    const PX = 440;
+    const tick = this.tick;
+
+    // Break room warm floor tint
+    ctx.fillStyle = 'rgba(100,40,160,0.06)';
+    ctx.fillRect(PX, WH+10, IW-PX, IH-WH-10);
+
+    // Doorway arch top (decorative)
+    const archY = 190;
+    ctx.strokeStyle = 'rgba(0,200,255,0.5)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(PX, archY);
+    ctx.bezierCurveTo(PX-4, archY-20, PX+4, archY-20, PX, archY-28);
+    ctx.stroke();
+
+    // Glass wall segment (WH+14 to archY)
+    const gAlpha = 0.05 + Math.sin(tick*0.025)*0.015;
+    ctx.fillStyle = `rgba(0,160,220,${gAlpha.toFixed(3)})`;
+    ctx.fillRect(PX-3, WH+14, 6, archY - WH - 14);
+
+    // Horizontal glass panel dividers
+    ctx.strokeStyle = 'rgba(0,200,255,0.18)';
+    ctx.lineWidth = 0.5;
+    for (let hy = WH+35; hy < archY-10; hy += 35) {
+      ctx.beginPath(); ctx.moveTo(PX-3, hy); ctx.lineTo(PX+3, hy); ctx.stroke();
+    }
+
+    // Main vertical line (full height)
+    const glow = 0.04 + Math.sin(tick*0.03)*0.02;
+    ctx.strokeStyle = `rgba(0,220,255,${(glow+0.3).toFixed(3)})`;
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(PX, WH+14); ctx.lineTo(PX, IH); ctx.stroke();
+
+    // Glow halo
+    const hg = ctx.createLinearGradient(PX-18, 0, PX+18, 0);
+    hg.addColorStop(0, 'rgba(0,180,255,0)');
+    hg.addColorStop(0.5, `rgba(0,180,255,${(glow*0.7).toFixed(3)})`);
+    hg.addColorStop(1, 'rgba(0,180,255,0)');
+    ctx.fillStyle = hg;
+    ctx.fillRect(PX-18, WH+14, 36, IH-WH-14);
+
+    // Door frame left post
+    ctx.fillStyle = 'rgba(10,20,40,0.95)';
+    ctx.fillRect(PX-3, archY, 6, IH-archY);
+
+    // Floor door sill glow
+    ctx.fillStyle = 'rgba(0,200,255,0.12)';
+    ctx.fillRect(PX-3, IH-6, 6, 6);
+
+    // BREAK ROOM label in wall strip
+    ctx.fillStyle = 'rgba(0,220,255,0.6)';
+    ctx.font = 'bold 5px "Share Tech Mono"';
+    ctx.textAlign = 'center';
+    ctx.fillText('◈ BREAK ROOM', PX + (IW-PX)/2, WH-4);
+    ctx.textAlign = 'left';
+  }
+
   private drawVignette() {
     const ctx=this.ctx;
     const W=IW, H=IH;
@@ -1182,45 +1242,34 @@ export class OfficeRenderer {
     // room background
     this.drawRoom();
 
-    // furniture (back items)
+    // partition wall (drawn early so furniture overlaps it correctly)
+    this.drawPartitionWall();
+
+    // work area furniture
     this.drawSofa(14,195);
     this.drawRug();
     this.drawCoffeeTable(26,232);
-
-    // shelves
     this.drawShelf(128,14);
-    this.drawShelf(340,14);
-
-    // poster + TV
-    this.drawMoviePoster(94,3);
-    this.drawFriendsTV(388,134,);
-
-    // armchair
-    this.drawArmchair(452,200);
-
-    // desks
-    const deskScreenColors=['#002255','#3A0010','#002810','#220040','#001E1E','#2A1200'];
-    DESK_XS.forEach((dx,i)=>this.drawDesk(dx,DESK_Y+5,i,deskScreenColors[i]));
-
-    // server racks
-    this.drawServerRack(558,268);
-    this.drawServerRack(596,268);
-
-    // plants
-    this.drawBigPlant(618,272);
+    this.drawShelf(288,14);
+    this.drawMoviePoster(86,3);
     this.drawSmallPlant(7,158,0);
     this.drawSmallPlant(7,348,1);
-    this.drawCactus(120,348);
+    this.drawCactus(122,322);
+    this.drawUVLamp(52,355);
+    this.drawCat(58,350);
 
-    // lamps
-    this.drawUVLamp(52,358);
+    // desks (4 desks)
+    const deskScreenColors=['#002255','#3A0010','#002810','#220040'];
+    DESK_XS.forEach((dx,i)=>this.drawDesk(dx,DESK_Y+5,i,deskScreenColors[i]));
 
-    // cats
-    this.drawCat(58,355);
-    this.drawSittingCat(170,292);
-
-    // coffee machine
-    this.drawCoffeeMachine(300,372);
+    // break room furniture
+    this.drawFriendsTV(453,128);
+    this.drawArmchair(556,196);
+    this.drawServerRack(554,262);
+    this.drawServerRack(590,262);
+    this.drawBigPlant(618,248);
+    this.drawSittingCat(506,278);
+    this.drawCoffeeMachine(497,310);
 
     // agents
     for (const a of this.agents) {
